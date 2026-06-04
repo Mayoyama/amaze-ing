@@ -5,6 +5,12 @@ Shane:
 - pathfinder logic
 - Terminal ASCII rendering, or a graphical display using the MiniLibX (MLX) library.
 
+NOTES:
+pure randomized DFS
+braid mazes with loops
+add logic that intentionally breaks down a few extra random walls after the DFS loop finishes to create alternative routes
+** Need to thoroughly test around "42" for open spaces bigger than 2x3
+
 
 Illia
 

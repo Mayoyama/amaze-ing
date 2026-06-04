@@ -26,12 +26,15 @@ class MazeGenerator:
         [0, 0, 1, 0, 1, 1, 1],  # Row 4: . . █ . █ █ █
     ]
 
-    def __init__(self, width: int, height: int, seed: int) -> None:
+    def __init__(self, width: int, height: int, seed: int, start_point: tuple[int, int], end_point: tuple[int, int], perfect_map: bool=True) -> None:
         """Initializes the maze configuration and instantiates a solid wall grid."""
         self.width = width
         self.height = height
         self.seed = seed
         self.grid = self._initialize_empty_grid()
+        self.start_point = start_point
+        self.end_point = end_point
+        self.perfect_map = perfect_map
 
 
     def _initialize_empty_grid(self) -> list[list[int]]:
@@ -71,6 +74,14 @@ class MazeGenerator:
                         fixed_42_cells.add((ft_grid_r, ft_grid_c))
         return fixed_42_cells
 
+    def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
+        for name, cell in [("Start", self.start_point), ("End", self.end_point)]:
+            r, c = cell
+            if not (0 <= r < self.height and 0 <= c < self.width):
+                raise ValueError(f"{name} point at {cell} is out of bounds. Please set a new coordinate.")
+            if cell in fixed_cells:
+                raise ValueError(f"{name} point at {cell} collides with '42' pattern. Please set a new coordinate.")
+        
 
     def _check_valid_neighbors(self, current: tuple[int, int], visited: set[tuple[int, int]], fixed_cells: set[tuple[int, int]]) -> list[tuple[int, int]]:
         """Returns a list of unvisited, non-fixed adjacent cells."""
@@ -106,20 +117,42 @@ class MazeGenerator:
             self.grid[curr_r][curr_c] &= ~2
             self.grid[next_r][next_c] &= ~8
 
+    def _final_map_adjustment(self) -> None:
+        if self.height < 3 or self.width < 3:
+            return
 
+        for scan_r in range(self.height - 2):
+            for scan_c in range(self.width - 2):
+                is_open_room = True
+                for window_r in range(scan_r, scan_r + 3):
+                    for window_c in range(scan_c, scan_c + 3):
+                        if self.grid[window_r][window_c] != 0:
+                            is_open_room = False
+                            break
+                    if not is_open_room:
+                        break
 
-
+                if is_open_room is True:
+                    self.grid[scan_r + 1][scan_c + 1] |= 1
+                    self.grid[scan_r][scan_c + 1] |= 4
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
+        random.seed(self.seed)
         fixed_cells = self._embed_42_pattern()
 
-        start_cell = (self.height - 1, 0)
+        self._validate_point(fixed_cells)
+        
+        if self._can_fit_42():
+            ft_start_row = (self.height - 5) // 2
+            ft_start_col = (self.width - 7) // 2
+            start_cell = (ft_start_row + 2, ft_start_col + 1)
+        else:
+            start_cell = (self.height - 1, 0)
+
 
         stack: list[tuple[int, int]] = [start_cell]
-        visited: set[tuple[int, int]] = {start_cell}
-
-        random.seed(self.seed)
+        visited: set[tuple[int, int]] = {start_cell} | fixed_cells #  | fixed_cells  Needed? Need to test!!
 
         while stack:
             current = stack[-1]
@@ -132,4 +165,64 @@ class MazeGenerator:
                 stack.append(next_cell)
             else:
                 stack.pop()
+
+        self._final_map_adjustment()
         return self.grid
+
+    def render_terminal(self) -> None:
+        """Prints a highly readable text representation of the maze to the console."""
+        if not self.grid or self.start_point is None or self.end_point is None:
+            print("Error: Map must be generated via gen_map() before rendering.")
+            return
+
+        fixed_cells = self._embed_42_pattern()
+
+        # ANSI Color escape codes
+        RESET = "\033[0m"
+        WALL_COLOR = "\033[90m"   # Dark Grey
+        START_COLOR = "\033[92m"  # Bright Green
+        END_COLOR = "\033[91m"    # Bright Red
+        TEXT_42_COLOR = "\033[96m" # Cyan
+        PATH_COLOR = "\033[97m"   # White (for clear paths)
+
+        render_w = self.width * 2 + 1
+        render_h = self.height * 2 + 1
+        buffer = [["█" for _ in range(render_w)] for _ in range(render_h)]
+
+        for r in range(self.height):
+            for c in range(self.width):
+                buf_r = r * 2 + 1
+                buf_c = c * 2 + 1
+                cell_val = self.grid[r][c]
+
+                # Assign characters to the floor paths
+                if (r, c) == self.start_point:
+                    buffer[buf_r][buf_c] = f"{START_COLOR}S{RESET}"
+                elif (r, c) == self.end_point:
+                    buffer[buf_r][buf_c] = f"{END_COLOR}E{RESET}"
+                elif (r, c) in fixed_cells:
+                    # Let's show the actual digit character for the fixed walls
+                    char_42 = "4" if c < (self.width // 2) else "2"
+                    buffer[buf_r][buf_c] = f"{TEXT_42_COLOR}{char_42}{RESET}"
+                else:
+                    buffer[buf_r][buf_c] = " "
+
+                # Clear out the shared wall spaces between cells if open
+                if (cell_val & 1) == 0:  # North
+                    buffer[buf_r - 1][buf_c] = " "
+                if (cell_val & 2) == 0:  # East
+                    buffer[buf_r][buf_c + 1] = " "
+                if (cell_val & 4) == 0:  # South
+                    buffer[buf_r + 1][buf_c] = " "
+                if (cell_val & 8) == 0:  # West
+                    buffer[buf_r][buf_c - 1] = " "
+
+        # Print the grid, wrapping the wall blocks in the wall color string
+        for row in buffer:
+            colored_line = ""
+            for char in row:
+                if char == "█":
+                    colored_line += f"{WALL_COLOR}█{RESET}"
+                else:
+                    colored_line += char
+            print(colored_line)
