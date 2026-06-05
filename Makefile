@@ -1,7 +1,10 @@
 .PHONY: install, run, debug, clean, lint, lint-strict
 
 install:
+	python3 -m venv maz_venv
+	source maze_venv/bin/activate
 	pip install ./MazeGenerator-1.0.0-py3-none-any.whl
+	pip install mlx-2.2-py3-ubuntu-any.whl
 
 run:
 	python3 a_maze_ing.py

@@ -5,6 +5,7 @@ matrix of walls into an open, perfect maze layout.
 """
 
 import random
+from dataclasses import dataclass
 
 
 class MazeGenerator:
@@ -26,15 +27,15 @@ class MazeGenerator:
         [0, 0, 1, 0, 1, 1, 1],  # Row 4: . . █ . █ █ █
     ]
 
-    def __init__(self, width: int, height: int, seed: int, start_point: tuple[int, int], end_point: tuple[int, int], perfect_map: bool=True) -> None:
+    def __init__(self, data: dataclass) -> None:
         """Initializes the maze configuration and instantiates a solid wall grid."""
-        self.width = width
-        self.height = height
-        self.seed = seed
+        self.width = data.width
+        self.height = data.height
+        self.seed = data.seed
         self.grid = self._initialize_empty_grid()
-        self.start_point = start_point
-        self.end_point = end_point
-        self.perfect_map = perfect_map
+        self.start_point = data.entry
+        self.end_point = data.exit
+        self.perfect_map = data.perfect
 
 
     def _initialize_empty_grid(self) -> list[list[int]]:
@@ -169,6 +170,7 @@ class MazeGenerator:
         self._final_map_adjustment()
         return self.grid
 
+'''
     def render_terminal(self) -> None:
         """Prints a highly readable text representation of the maze to the console."""
         if not self.grid or self.start_point is None or self.end_point is None:
@@ -226,3 +228,4 @@ class MazeGenerator:
                 else:
                     colored_line += char
             print(colored_line)
+'''

@@ -1,5 +1,6 @@
 from MazeGenerator import MazeGenerator
 import random
+from typing import Any
 
 
 STARTING_CONFIG = {
@@ -11,11 +12,7 @@ STARTING_CONFIG = {
     "perfect": True
 }
 
-if __name__ == "__main__":
-    newmaze = MazeGenerator(STARTING_CONFIG["width"], STARTING_CONFIG["height"], STARTING_CONFIG["seed"],
-                            STARTING_CONFIG["start"], STARTING_CONFIG["end"], STARTING_CONFIG["perfect"])
-    try:
-        newmaze.gen_map()
-        newmaze.render_terminal()
-    except ValueError as e:
-        print(e)
+def render_map_terminal(maze: MazeGenerator, config: dict[Any]) -> None:
+    
+
+
