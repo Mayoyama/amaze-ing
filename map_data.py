@@ -24,7 +24,7 @@ class mapData:
 '''
 insert parse function from config.txt
 '''
-def temp_data() -> dataclass:
+def temp_data() -> mapData:
     return mapData(**TEMP_CONFIG)
 
 
