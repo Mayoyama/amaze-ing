@@ -1,7 +1,7 @@
 from mlx import Mlx
 from typing import Any
 from MazeGenerator import MazeGenerator
-from map_data import temp_data
+from map_data import parse
 
 
 def has_N_wall(cell: int) -> bool:
@@ -104,11 +104,10 @@ class App:
 
 
 if __name__ == "__main__":
-    map_data = temp_data()
-
-    mazeGen = MazeGenerator(map_data)
-
     try:
+        map_data = parse()
+
+        mazeGen = MazeGenerator(map_data)
         newmaze = mazeGen.gen_map()
 
         mlx = Mlx()
@@ -124,4 +123,6 @@ if __name__ == "__main__":
         app.run()
 
     except ValueError as e:
+        print(e)
+    except Exception as e:
         print(e)

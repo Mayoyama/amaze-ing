@@ -1,5 +1,5 @@
 from MazeGenerator import MazeGenerator
-from map_data import temp_data
+from map_data import parse
 from typing import Any
 from mlx_render import mlx_render
 
@@ -7,7 +7,7 @@ from mlx_render import mlx_render
 
 
 if __name__ == "__main__":
-    map_data = temp_data()
+    map_data = parse()
 	
     mazeGen = MazeGenerator(map_data)
     try:
