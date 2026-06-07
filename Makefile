@@ -4,7 +4,7 @@ install:
 	python3 -m venv maze_venv
 	./maze_venv/bin/pip install --upgrade pip
 	./maze_venv/bin/pip install mypy
-	./maze_venv/bin/pip install mlx-2.2-py3-none-any.whl
+	./maze_venv/bin/pip install ./misc_files/mlx-2.2-py3-none-any.whl
 	#  pip install ./MazeGenerator-1.0.0-py3-none-any.whl
 	#  pip install mlx-2.2-py3-none-any.whl
 

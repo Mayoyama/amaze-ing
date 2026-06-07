@@ -106,7 +106,7 @@ class MazeGenerator:
         direction_r = next_r - curr_r
         direction_c = next_c - curr_c
         if direction_r == -1:
-            self.grid[curr_r][curr_c] &= ~1
+            self.grid[curr_r][curr_c] &= ~1 # MAYBE IT'S HERE
             self.grid[next_r][next_c] &= ~4
         if direction_r == 1:
             self.grid[curr_r][curr_c] &= ~4
@@ -136,6 +136,17 @@ class MazeGenerator:
                 if is_open_room is True:
                     self.grid[scan_r + 1][scan_c + 1] |= 1
                     self.grid[scan_r][scan_c + 1] |= 4
+
+    def display(self) -> None:
+        """Display a map and key point on terminal"""
+        for row in self.grid:
+            for col in row:
+                print(hex(col)[2:].upper(), end="")
+            print()
+        print()
+        print(f"{self.start_point[0]},{self.start_point[1]}")
+        print(f"{self.end_point[0]},{self.end_point[1]}")
+            
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
@@ -168,6 +179,7 @@ class MazeGenerator:
                 stack.pop()
 
         self._final_map_adjustment()
+        self.display()
         return self.grid
 
 '''
