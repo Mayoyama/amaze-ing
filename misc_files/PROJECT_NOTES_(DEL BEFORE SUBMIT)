@@ -17,6 +17,11 @@ Illia
 - Output file format
 - configuration file format/parsing
 
+Illia notes:
+Entry and exit exist and are different, inside the maze bounds
+Print an error messege if size is too small for 42 label(What should we do if the start poin or end point is on 42 label?)
+Change output to a output file
+Can we do MIX window flexible depending of the size of maze?
 
 
 
