@@ -90,3 +90,65 @@ alignment to 32/64-bit boundaries
 
 If this is wrong → distorted or invisible image.
 ****
+
+
+
+#  newmaze.render_terminal()    old, dont use
+'''
+    def render_terminal(self) -> None:
+        """Prints a highly readable text representation of the maze to the console."""
+        if not self.grid or self.start_point is None or self.end_point is None:
+            print("Error: Map must be generated via gen_map() before rendering.")
+            return
+
+
+        # ANSI Color escape codes
+        RESET = "\033[0m"
+        WALL_COLOR = "\033[90m"   # Dark Grey
+        START_COLOR = "\033[92m"  # Bright Green
+        END_COLOR = "\033[91m"    # Bright Red
+        TEXT_42_COLOR = "\033[96m" # Cyan
+        PATH_COLOR = "\033[97m"   # White (for clear paths)
+
+        render_w = self.width * 2 + 1
+        render_h = self.height * 2 + 1
+        buffer = [["█" for _ in range(render_w)] for _ in range(render_h)]
+
+        for r in range(self.height):
+            for c in range(self.width):
+                buf_r = r * 2 + 1
+                buf_c = c * 2 + 1
+                cell_val = self.grid[r][c]
+
+                # Assign characters to the floor paths
+                if (r, c) == self.start_point:
+                    buffer[buf_r][buf_c] = f"{START_COLOR}S{RESET}"
+                elif (r, c) == self.end_point:
+                    buffer[buf_r][buf_c] = f"{END_COLOR}E{RESET}"
+                elif (r, c) in self.fixed_cells:
+                    # Let's show the actual digit character for the fixed walls
+                    char_42 = "4" if c < (self.width // 2) else "2"
+                    buffer[buf_r][buf_c] = f"{TEXT_42_COLOR}{char_42}{RESET}"
+                else:
+                    buffer[buf_r][buf_c] = " "
+
+                # Clear out the shared wall spaces between cells if open
+                if (cell_val & 1) == 0:  # North
+                    buffer[buf_r - 1][buf_c] = " "
+                if (cell_val & 2) == 0:  # East
+                    buffer[buf_r][buf_c + 1] = " "
+                if (cell_val & 4) == 0:  # South
+                    buffer[buf_r + 1][buf_c] = " "
+                if (cell_val & 8) == 0:  # West
+                    buffer[buf_r][buf_c - 1] = " "
+
+        # Print the grid, wrapping the wall blocks in the wall color string
+        for row in buffer:
+            colored_line = ""
+            for char in row:
+                if char == "█":
+                    colored_line += f"{WALL_COLOR}█{RESET}"
+                else:
+                    colored_line += char
+            print(colored_line)
+'''

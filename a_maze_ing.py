@@ -13,6 +13,6 @@ if __name__ == "__main__":
     try:
         newmaze = mazeGen.gen_map()
         mlx_render(newmaze)
-        #  newmaze.render_terminal()    old, dont use
+
     except ValueError as e:
         print(e)
