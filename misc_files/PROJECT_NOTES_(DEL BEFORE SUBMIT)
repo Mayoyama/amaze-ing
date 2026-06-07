@@ -2,8 +2,16 @@ Tasks:
 
 Shane:
 - Mage generation
+**Need: Perfect: confirm only one true path exists
+** Need non-perfect maze correction
+** Bonus: consider implementing a secong algo for maze gen
 - pathfinder logic
-- Terminal ASCII rendering, or a graphical display using the MiniLibX (MLX) library.
+- Terminal MLX rendering
+**Need: shortest path logic/render
+**Need: show/hide path logic
+**Need: fix non-perfect map render
+**Consider: adjusting map cell_size based on height/width
+ -> Would need to calculate "total hieght (map + text menu)
 
 NOTES:
 pure randomized DFS
@@ -52,43 +60,13 @@ DIRECTIONS = {
 
 
 SHANE - MLX Rendering
-DONE (you can stop worrying about these)
-bitmask system
-cell geometry
-wall placement logic
-pixel stepping
-function decomposition
+DONE 
 
-NOT DONE (integration layer)
-MLX render timing
-image flush to window
-framebuffer stride correctness
-event-driven redraw behavior
-****
-Missing Piece #1: Image boundary safety
 
-now assuming: pixel_x, pixel_y always valid
 
-But nothing prevents:
 
-drawing outside image width
-drawing outside image height
 
-This won’t crash in Python, but in MLX it often results in blank or partially invisible output
-****
 
-offset = y * size_line + x * 4
-
-This is only valid if:
-
-size_line == width * 4
-
-But MLX often aligns rows:
-
-padding bytes per row
-alignment to 32/64-bit boundaries
-
-If this is wrong → distorted or invisible image.
 ****
 
 

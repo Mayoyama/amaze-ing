@@ -13,6 +13,7 @@ class render_settings:
     cell_size: int = 15
 # maze size  = maze size + menu!!!
 
+
 @dataclass
 class UI_state:
 
@@ -39,74 +40,84 @@ class Renderer:
         self.fixed_cells = fixed_cells
 
     @staticmethod
-    def has_N_wall(cell: int) -> bool:
+    def _has_N_wall(cell: int) -> bool:
         return bool(cell & 1)
 
     @staticmethod
-    def has_E_wall(cell: int) -> bool:
+    def _has_E_wall(cell: int) -> bool:
         return bool(cell & 2)
 
     @staticmethod
-    def has_S_wall(cell: int) -> bool:
+    def _has_S_wall(cell: int) -> bool:
         return bool(cell & 4)
 
     @staticmethod
-    def has_W_wall(cell: int) -> bool:
+    def _has_W_wall(cell: int) -> bool:
         return bool(cell & 8)
 
+    def clear_map(self) -> None:
+        for r in range(len(self.grid)):
+            for c in range(len(self.grid[0])):
+                x = c * self.cell_size
+                y = r * self.cell_size
+                for cell_x in range(self.cell_size):
+                    for cell_y in range(self.cell_size):
+                        self._put_pixel(x + cell_x, y + cell_y, (0, 0, 0))
 
-
-    def _draw_horizontal_line(self, x: int, y: int, length: int):
+    def _draw_horizontal_line(self, x: int, y: int, length: int) -> None:
         for i in range(length):
-            self.put_pixel(x + i, y, self.ui.wall_color)
+            self._put_pixel(x + i, y, self.ui.wall_color)
 
-    def _draw_vertical_line(self, x: int, y: int, length: int):
+    def _draw_vertical_line(self, x: int, y: int, length: int) -> None:
         for i in range(length):
-            self.put_pixel(x, y + i, self.ui.wall_color)
+            self._put_pixel(x, y + i, self.ui.wall_color)
 
-    def _fill_cell(self, r: int, c: int, color: tuple[int, int, int]):
+    def _fill_cell(self, r: int, c: int, color: tuple[int, int, int]) -> None:
         x = c * self.cell_size
         y = r * self.cell_size
         for r_offset in range(1, self.cell_size - 1):
             for c_offset in range(1, self.cell_size - 1):
-                self.put_pixel(x + c_offset, y + r_offset, color)
+                self._put_pixel(x + c_offset, y + r_offset, color)
 
-    def fill_logo42(self):
+    def _fill_logo42(self) -> None:
         for r, c in self.fixed_cells:
             self._fill_cell(r, c, self.ui.logo42_color)
 
-    def fill_start_cell(self):
+    def _fill_start_cell(self) -> None:
         r, c = self.map_data.entry
         self._fill_cell(r, c, (0, 210, 0))  # Grass green
 
-    def fill_end_cell(self) -> None:
+    def _fill_end_cell(self) -> None:
         r, c = self.map_data.exit
         self._fill_cell(r, c, (128, 0, 32))  # Burgundy
 
-    def draw_cell(self, x: int, y: int, cell: int):
-        if self.has_N_wall(cell):
+    def _draw_cell(self, x: int, y: int, cell: int) -> None:
+        if self._has_N_wall(cell):
             self._draw_horizontal_line(x, y, self.cell_size)
-        if self.has_E_wall(cell):
+        if self._has_E_wall(cell):
             self._draw_vertical_line(x + self.cell_size, y, self.cell_size)
-        if self.has_S_wall(cell):
+        if self._has_S_wall(cell):
             self._draw_horizontal_line(x, y + self.cell_size, self.cell_size)
-        if self.has_W_wall(cell):
+        if self._has_W_wall(cell):
             self._draw_vertical_line(x, y, self.cell_size)
 
-    def put_pixel(self, x: int, y: int, color: tuple[int, int, int]):
+    def _put_pixel(self, x: int, y: int, color: tuple[int, int, int]) -> None:
         offset = (y * self.size_line) + (x * 4)
         self.data[offset + 0] = color[2]
         self.data[offset + 1] = color[1]
         self.data[offset + 2] = color[0]
         self.data[offset + 3] = 255
 
-    def render_grid(self):
+    def render_grid(self) -> None:
         for r in range(len(self.grid)):
             for c in range(len(self.grid[0])):
                 cell = self.grid[r][c]
                 x = c * self.cell_size
                 y = r * self.cell_size
-                self.draw_cell(x, y, cell)
+                self._draw_cell(x, y, cell)
+        self._fill_logo42()
+        self._fill_start_cell()
+        self._fill_end_cell()
 
 
 class App:
@@ -114,7 +125,7 @@ class App:
     Owns MLX runtime and connects generator output to renderer.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.map_data = temp_data()
         self.mazeGen = MazeGenerator(self.map_data)
         self.grid = self.mazeGen.gen_map()
@@ -129,32 +140,15 @@ class App:
         self.renderer = Renderer(self.grid, self.map_data, self.mazeGen.fixed_cells, self.data, self.size_line, self.r_config.cell_size, self.ui)
         self._setup_hooks()
 
-    def next_color(self) -> tuple[int, int, int]:
-        color_palette = [(34, 139, 34), (255, 165, 0), (255, 255, 0), (255, 0, 0), (64, 224, 208), (0, 0, 128), (135, 206, 235), (255, 192, 203), (255, 0, 255)]
-        return random.choice(color_palette)
+    def _regenerate_map(self) -> None:
+        self.mazeGen = MazeGenerator(self.map_data)
+        self.grid = self.mazeGen.gen_map()
+        self.renderer.grid = self.grid
+        self.renderer.fixed_cells = self.mazeGen.fixed_cells
 
-    def _setup_hooks(self):
-        def key_handler(keycode, param):
-            if keycode == 49:
-                self.ui.wall_color = self.next_color()
-            elif keycode == 50:
-                self.ui.logo42_color = self.next_color()
-            elif keycode ==  51:
-                self.ui.show_path = not self.ui.show_path
-            elif keycode == 52:
-                pass
-                #update (perfect) map seed and regenerate new map, then re-render
-            elif keycode == 53:
-                pass
-                #update (not perfect) map seed and regenerate new map, then re-render
-            elif keycode == 65307:
-                self.mlx.mlx_loop_exit(self.mlx_ptr)
-            self.redraw_map()
-        self.mlx.mlx_key_hook(self.win, key_handler, None)
-
-    def draw_menu(self):
+    def _draw_menu(self) -> None:
         menu_x = 10
-        menu_y_start = (len(self.grid[0]) * self.r_config.cell_size) + 10
+        menu_y_start = (len(self.grid) * self.r_config.cell_size) + 10
         spacing = 20
         menu_list = [
             "Welcome to A*Maze*Ing! Make you selection:", "",
@@ -167,33 +161,56 @@ class App:
             menu_y = menu_y_start + (i * spacing)
             self.mlx.mlx_string_put(self.mlx_ptr, self.win, menu_x, menu_y, 0xFFFFFF, string)
 
-    def redraw_map(self):
-        pass
-        # clear image/ clear buffer (later)
+
+
+    def _redraw_map(self) -> None:
+        self.renderer.clear_map()
         self.renderer.render_grid()
-        self.renderer.fill_logo42()
-        self.renderer.fill_start_cell()
-        self.renderer.fill_end_cell()
-        if self.ui.show_path:
-            pass
-            # draw path if enabled
+        # if self.ui.show_path:s
+        #     # draw path if enabled
+        #     pass
         self.mlx.mlx_put_image_to_window(
             self.mlx_ptr, self.win,
             self.img, 0, 0)
 
         # display image
-        self.draw_menu()
+        #self.draw_menu()  <- BROKEN (NEEDS TESTING ON SCHOOL PC)
 
-    def run(self):
+    def _next_color(self) -> tuple[int, int, int]:
+        color_palette: set[tuple[int, int, int]] = {(34, 139, 34), (255, 165, 0), (255, 255, 0), (255, 0, 0), (64, 224, 208), (0, 0, 128), (255, 192, 203), (255, 0, 255)}
+        new_color = color_palette.difference({self.ui.wall_color})
+        return random.choice(list(new_color))
+
+    def _setup_hooks(self) -> None:
+        def key_handler(keycode, param):
+            if keycode == 49:
+                self.ui.wall_color = self._next_color()
+            elif keycode == 50:
+                self.ui.logo42_color = self._next_color()
+            elif keycode ==  51:
+                self.ui.show_path = not self.ui.show_path
+            elif keycode == 52:
+                self.map_data.perfect = True
+                self.map_data.seed += 1
+                self._regenerate_map()
+            elif keycode == 53:
+                # self.map_data.perfect = False  (FALSE NOT IMPLEMENTED YET)
+                self.map_data.seed += 1
+                self._regenerate_map()
+
+            elif keycode == 65307:
+                self.mlx.mlx_loop_exit(self.mlx_ptr)
+            self._redraw_map()
+        self.mlx.mlx_key_hook(self.win, key_handler, None)
+
+
+    def run(self) -> None:
         self.renderer.render_grid()
 
-        self.renderer.fill_logo42()
-        self.renderer.fill_start_cell()
-        self.renderer.fill_end_cell()
         self.mlx.mlx_put_image_to_window(
             self.mlx_ptr, self.win,
             self.img, 0, 0)
-        self.draw_menu()
+        self._draw_menu()
         self.mlx.mlx_loop(self.mlx_ptr)
 
 
