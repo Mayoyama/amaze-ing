@@ -80,7 +80,7 @@ def parse() -> mapData:
                         raise Exception("Not all value was given correctly or there is some empty line!")
         if nbr_line == 6:
             map: mapData = mapData(width, height, entry, exit, output_file, perfect, seed)
-            if width > 25 or height > 25:
+            if width > 100 or height > 100:
                 raise Exception("Maximum size of map is 25")
             return(map)
         else:

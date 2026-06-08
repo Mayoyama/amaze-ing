@@ -1,6 +1,6 @@
 from mlx import Mlx
 from typing import Any
-from MazeGenerator import MazeGenerator
+from MazeGenerator.MazeGenerator_bonus import MazeGenerator_bonus
 from map_data import parse, print_map
 
 
@@ -107,7 +107,7 @@ class App:
             print("KEY:", keycode)
             if keycode == 51:
                 mlx.mlx_clear_window(self.mlx_ptr, self.win)
-                app.run()
+                self.run()
             if keycode == 52:
                 self.mlx.mlx_loop_exit(self.mlx_ptr)
             
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     try:
         map_data = parse()
 
-        mazeGen = MazeGenerator(map_data)
+        mazeGen = MazeGenerator_bonus(map_data)
         newmaze = mazeGen.gen_map()
         
         print_map(mazeGen, map_data)
