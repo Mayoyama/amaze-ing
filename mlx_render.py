@@ -1,20 +1,24 @@
 from mlx import Mlx
 from typing import Any
 from MazeGenerator import MazeGenerator
-from map_data import parse
+from map_data import parse, print_map
 
 
 def has_N_wall(cell: int) -> bool:
     return bool(cell & 1)
 
+
 def has_E_wall(cell: int) -> bool:
     return bool(cell & 2)
+
 
 def has_S_wall(cell: int) -> bool:
     return bool(cell & 4)
 
+
 def has_W_wall(cell: int) -> bool:
     return bool(cell & 8)
+
 
 class Renderer:
     """
@@ -26,6 +30,7 @@ class Renderer:
         self.data = data
         self.size_line = size_line
         self.cell_size = cell_size
+        self.nbr_try: int = 0
 
     def put_pixel(self, x: int, y: int, color: tuple[int, int, int]):
         offset = (y * self.size_line) + (x * 4)
@@ -35,12 +40,20 @@ class Renderer:
         self.data[offset + 3] = 255
 
     def draw_horizontal_line(self, x: int, y: int, length: int):
-        for i in range(length):
-            self.put_pixel(x + i, y, (0, 255, 0))
+        if self.nbr_try == 0:
+            for i in range(length):
+                self.put_pixel(x + i, y, (0, 255, 0))
+        else:
+            for i in range(length):
+                self.put_pixel(x + i, y, (200, 100, 200))
 
     def draw_vertical_line(self, x: int, y: int, length: int):
-        for i in range(length):
-            self.put_pixel(x, y + i, (0, 255, 0))
+        if self.nbr_try == 0:
+            for i in range(length):
+                self.put_pixel(x, y + i, (0, 255, 0))
+        else:
+            for i in range(length):
+                self.put_pixel(x, y + i, (200, 100, 200))
 
     def draw_cell(self, x: int, y: int, cell: int):
         if has_N_wall(cell):
@@ -56,9 +69,14 @@ class Renderer:
         for r in range(len(self.grid)):
             for c in range(len(self.grid[0])):
                 cell = self.grid[r][c]
-                x = c * self.cell_size
-                y = r * self.cell_size
+                x = c * self.cell_size + 7
+                y = r * self.cell_size + 5
                 self.draw_cell(x, y, cell)
+        if self.nbr_try == 0:
+            self.nbr_try = 1
+        else:
+            self.nbr_try = 0
+
 
 
 class App:
@@ -70,9 +88,11 @@ class App:
         self.mlx = mlx
         self.grid = grid
         self.cell_size = cell_size
+        self.width = width
+        self.height = height
 
         self.mlx_ptr = mlx.mlx_init()
-        self.win = mlx.mlx_new_window(self.mlx_ptr, 800, 600, "maze")
+        self.win = mlx.mlx_new_window(self.mlx_ptr, width, height, "maze")
 
         self.img = mlx.mlx_new_image(self.mlx_ptr, width, height)
         self.data, self.bpp, self.size_line, self.fmt = mlx.mlx_get_data_addr(self.img)
@@ -85,7 +105,12 @@ class App:
     def _setup_hooks(self):
         def key_handler(keycode, param):
             print("KEY:", keycode)
-            self.mlx.mlx_loop_exit(self.mlx_ptr)
+            if keycode == 51:
+                mlx.mlx_clear_window(self.mlx_ptr, self.win)
+                app.run()
+            if keycode == 52:
+                self.mlx.mlx_loop_exit(self.mlx_ptr)
+            
 
         self.mlx.mlx_key_hook(self.win, key_handler, None)
 
@@ -100,6 +125,8 @@ class App:
             0,
             0
         )
+        if self.width > self.cell_size * 18:
+            mlx.mlx_string_put(self.mlx_ptr, self.win, 5, self.height - 35, 0xFFFFFF, "1: regen; 2: path; 3: color; 4: quit")
         self.mlx.mlx_loop(self.mlx_ptr)
 
 
@@ -109,14 +136,16 @@ if __name__ == "__main__":
 
         mazeGen = MazeGenerator(map_data)
         newmaze = mazeGen.gen_map()
+        
+        print_map(mazeGen, map_data)
 
         mlx = Mlx()
 
         app = App(
             mlx=mlx,
             grid=newmaze,
-            width=800,
-            height=600,
+            width=map_data.width * 20 + 20,
+            height=map_data.height * 20 + 42,
             cell_size=20
         )
 

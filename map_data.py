@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from MazeGenerator import MazeGenerator
 
 TEMP_CONFIG = {
     "width": 21,  # THIS GLOBAL NEEDS TO BE REPLACED BY PARSED DATA
@@ -61,7 +62,7 @@ def parse() -> mapData:
                         exit: tuple[int, int] = (x_exit, y_exit)
                         nbr_line += 1
                     elif (line.startswith("OUTPUT_FILE=") and nbr_line == 4):
-                        output_file: str = line[12:]
+                        output_file: str = line[12:].strip('\n')
                         if (output_file == ''):
                             raise Exception("OUTPUT_FILE can not be empty!")
                         nbr_line += 1
@@ -87,8 +88,22 @@ def parse() -> mapData:
     except (FileNotFoundError, PermissionError, Exception, TypeError) as e:
         raise e
 
+def print_map(maze: MazeGenerator, map_data: mapData) -> None:
+    """Display a map and key point on output file"""
+    try:
+        with open(map_data.output_file, "w") as file:
+            for row in maze.grid:
+                for col in row:
+                    file.write(hex(col)[2:].upper())
+                file.write("\n")
+            file.write("\n")
+            file.write(repr(maze.start_point[0]) + ',' + repr(maze.start_point[1]) + '\n')
+            file.write(repr(maze.end_point[0]) + ',' + repr(maze.end_point[1]))
+    except (FileNotFoundError, PermissionError) as e:
+        raise Exception(f"Error opening file '{map_data.output_file}': {e}")
 
-def temp_data() -> mapData:
+
+def temp_data() -> mapData: #TO DELETE
     return mapData(**TEMP_CONFIG)
 
 
