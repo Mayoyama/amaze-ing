@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
 TEMP_CONFIG = {
-    "width": 30,  # THIS GLOBAL NEEDS TO BE REPLACED BY PARSED DATA
-    "height": 30,
-    "entry": (2, 10),
-    "exit": (10, 2),
+    "width": 50,  # THIS GLOBAL NEEDS TO BE REPLACED BY PARSED DATA
+    "height": 50,
+    "entry": (1, 4),
+    "exit": (44, 43),
     "output_file": "",
     "seed": 42,
     "perfect": True
