@@ -75,13 +75,13 @@ class MazeGenerator_bonus:
                         fixed_42_cells.add((ft_grid_r, ft_grid_c))
         return fixed_42_cells
 
-    #def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
-    #    for name, cell in [("Start", self.start_point), ("End", self.end_point)]:
-    #        r, c = cell
-    #        if not (0 <= r < self.height and 0 <= c < self.width):
-    #            raise ValueError(f"{name} point at {cell} is out of bounds. Please set a new coordinate.")
-    #        if cell in fixed_cells:
-    #            raise ValueError(f"{name} point at {cell} collides with '42' pattern. Please set a new coordinate.")
+    def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
+       for name, cell in [("Start", self.start_point), ("End", self.end_point)]:
+           r, c = cell
+           if not (0 <= r < self.height and 0 <= c < self.width):
+               raise ValueError(f"{name} point at {cell} is out of bounds. Please set a new coordinate.")
+           if cell in fixed_cells:
+               raise ValueError(f"{name} point at {cell} collides with '42' pattern. Please set a new coordinate.")
         
 
     #def _check_valid_neighbors(self, current: tuple[int, int], visited: set[tuple[int, int]], fixed_cells: set[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -139,29 +139,68 @@ class MazeGenerator_bonus:
 
     def check_neighbors(self, row: int, col: int) -> None:
         if col > 0:
-           if self.grid[row][col-1] in (13, 12):
+           if self.grid[row][col-1] & 2 == 0:
               self.grid[row][col] &= ~8
         if row > 0:
-            if (self.grid[row-1][col] & 2) != 0:
-                self.grid[row][col] &= ~4 
+            if self.grid[row-1][col] & 4 == 0:
+                self.grid[row][col] &= ~1 
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
-        #random.seed(self.seed)
-        #fixed_cells = self._embed_42_pattern()
+        random.seed(self.seed)
+        fixed_cells = self._embed_42_pattern()
 
-        #self._validate_point(fixed_cells)
+        self._validate_point(fixed_cells)
         
-        #if self._can_fit_42():
-        #    ft_start_row = (self.height - 5) // 2
-        #    ft_start_col = (self.width - 7) // 2
-        #    start_cell = (ft_start_row + 2, ft_start_col + 1)
-        #else:
-        #    start_cell = (self.height - 1, 0)
+        if self._can_fit_42():
+            if self.height == 6 and self.width == 8:
+                ft_start_col = 0
+                ft_start_row = 0
+            else:
+                ft_start_row = (self.height - 5) // 2
+                ft_start_col = (self.width - 7) // 2
+            
+            ft_end_row = ft_start_row + 4
+            ft_end_col = ft_start_col + 6
+        else:
+           ft_start_row = ft_end_row = ft_start_col = ft_end_col = -1
 
+        
         for row in range(self.height):
             for col in range(self.width):
-                rnd: int = random.choice([2, 4])
-                self.grid[row][col] &= ~rnd
+                if (row, col) in fixed_cells:
+                    continue
+
+                is_last_row = (row == self.height - 1)
+                is_last_col = (col == self.width - 1)
+
+                is_top_42 = (row == ft_start_row - 1) and (ft_start_col <= col <= ft_end_col)
+                is_bottom_42 = (row == ft_end_row + 1) and (ft_start_col <= col <= ft_end_col)
+                is_left_42 = (col == ft_start_col - 1) and (ft_start_row <= row <= ft_end_row - 3)
+                is_right_42 = (col == ft_end_col + 1) and (ft_start_row <= row <= ft_end_row)
+                is_middle_42 = (ft_start_row <= row <= ft_end_row) and (col == ft_start_col + 3)
+
+                if is_middle_42:
+                    rnd: int = 2 if is_last_row else 4
+                elif is_top_42 and not is_last_col:
+                    rnd: int = 1
+                elif is_bottom_42:
+                    rnd: int = 2 if is_last_row else 4
+                elif is_left_42 and not is_last_col:
+                    rnd: int = 2 if is_last_col else 4
+                elif is_right_42:
+                    rnd: int =  2 if is_last_col else 4
+                elif is_last_row and is_last_col:
+                    rnd: int = 0
+                elif is_last_row:
+                    rnd: int = 2
+                elif is_last_col:
+                    rnd: int = 4
+                else:
+                    rnd: int = random.choice([2, 4])
+                
+                if rnd != 0:
+                    self.grid[row][col] &= ~rnd
                 self.check_neighbors(row, col)
+                
         return self.grid
