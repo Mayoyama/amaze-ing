@@ -60,12 +60,8 @@ class MazeGenerator_bonus:
         fixed_42_cells: set[tuple[int, int]] = set()
 
         if self._can_fit_42():
-            if self.height == 6 and self.width == 8:
-                ft_start_row = 0
-                ft_start_col = 0
-            else: 
-                ft_start_row = (self.height - 5) // 2
-                ft_start_col = (self.width - 7) // 2
+            ft_start_row = 0
+            ft_start_col = 0
             for r in range(5):
                 for c in range(7):
                     ft_grid_r = ft_start_row + r
@@ -153,19 +149,15 @@ class MazeGenerator_bonus:
         self._validate_point(fixed_cells)
         
         if self._can_fit_42():
-            if self.height == 6 and self.width == 8:
-                ft_start_col = 0
-                ft_start_row = 0
-            else:
-                ft_start_row = (self.height - 5) // 2
-                ft_start_col = (self.width - 7) // 2
-            
+            ft_start_col = 0
+            ft_start_row = 0
+
             ft_end_row = ft_start_row + 4
             ft_end_col = ft_start_col + 6
         else:
            ft_start_row = ft_end_row = ft_start_col = ft_end_col = -1
 
-        
+
         for row in range(self.height):
             for col in range(self.width):
                 if (row, col) in fixed_cells:
@@ -173,23 +165,39 @@ class MazeGenerator_bonus:
 
                 is_last_row = (row == self.height - 1)
                 is_last_col = (col == self.width - 1)
-
-                is_top_42 = (row == ft_start_row - 1) and (ft_start_col <= col <= ft_end_col)
-                is_bottom_42 = (row == ft_end_row + 1) and (ft_start_col <= col <= ft_end_col)
-                is_left_42 = (col == ft_start_col - 1) and (ft_start_row <= row <= ft_end_row - 3)
-                is_right_42 = (col == ft_end_col + 1) and (ft_start_row <= row <= ft_end_row)
-                is_middle_42 = (ft_start_row <= row <= ft_end_row) and (col == ft_start_col + 3)
-
-                if is_middle_42:
-                    rnd: int = 2 if is_last_row else 4
-                elif is_top_42 and not is_last_col:
-                    rnd: int = 1
-                elif is_bottom_42:
-                    rnd: int = 2 if is_last_row else 4
-                elif is_left_42 and not is_last_col:
-                    rnd: int = 2 if is_last_col else 4
-                elif is_right_42:
-                    rnd: int =  2 if is_last_col else 4
+                
+                if col == ft_start_col + 1 and row == ft_start_row:
+                    rnd = 6
+                elif col == ft_start_col + 1 and row == ft_start_row + 1:
+                    rnd  = 1
+                elif col == ft_start_col + 2 and row == ft_start_row:
+                    rnd = 2
+                elif col == ft_start_col + 3 and row == ft_start_row:
+                    rnd = 4
+                elif col == ft_start_col + 3 and row == ft_start_row + 1:
+                    rnd = 6
+                elif col == ft_start_col + 3 and row == ft_start_row + 2:
+                    rnd = 4
+                elif col == ft_start_col + 3 and row == ft_start_row + 3:
+                    rnd = 4
+                elif col == ft_start_col + 3 and row == ft_start_row + 4:
+                    rnd = 4
+                elif col == ft_start_col and row == ft_start_row + 3:
+                    rnd = 2
+                elif col == ft_start_col + 1 and row == ft_start_row + 3:
+                    rnd = 4
+                elif col == ft_start_col + 1 and row == ft_start_row + 4:
+                    rnd = 4
+                elif col == ft_start_col + 1 and row == ft_start_row + 3:
+                    rnd = 4
+                elif col == ft_start_col + 4 and row == ft_end_row + 1:
+                    rnd = 0
+                elif col == ft_start_col + 5 and row == ft_start_row + 3:
+                    rnd = 2
+                elif col == ft_start_col + 6 and row == ft_start_row + 3:
+                    rnd = 2
+                elif col == ft_start_col + 4 and row == ft_start_row + 5:
+                    rnd = 7
                 elif is_last_row and is_last_col:
                     rnd: int = 0
                 elif is_last_row:

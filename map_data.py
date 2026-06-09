@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from MazeGenerator import MazeGenerator
+import random
 
 TEMP_CONFIG = {
     "width": 21,  # THIS GLOBAL NEEDS TO BE REPLACED BY PARSED DATA
@@ -75,7 +76,7 @@ def parse() -> mapData:
                             raise Exception("Please put PERFECT correctly!")
                         nbr_line += 1
                     elif (line.startswith("SEED=") and nbr_line == 6):
-                        seed: int = found_value(line[5:].strip('\n'))
+                        seed: int = random.randint(1, 56)       #found_value(line[5:].strip('\n'))
                     else:
                         raise Exception("Not all value was given correctly or there is some empty line!")
         if nbr_line == 6:
