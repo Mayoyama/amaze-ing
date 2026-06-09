@@ -29,22 +29,17 @@ def parse_config() -> mapData:
     except (FileNotFoundError, PermissionError, IsADirectoryError) as e:
         raise OSError("Cannot access config file") from e
 
-    required = {"WIDTH", "HEIGHT", "ENTRY", "EXIT", "OUTPUT_FILE",
-                "PERFECT", "SEED"}
-    seen = set()
     nbr_line = 0
     for line in lines:
-        if line.strip() == '': # CHANGE: Ignore empty lines instead of treating them as invalid
+        if line.strip() == '':
             continue
         if line.startswith("#"):
             continue
         if (line.startswith("WIDTH=") and nbr_line == 0):
             width: int = found_value(line[6:].strip())
-            seen.add("WIDTH")
             nbr_line += 1
         elif (line.startswith("HEIGHT=") and nbr_line == 1):
             height: int = found_value(line[7:].strip())
-            seen.add("HEIGHT")
             nbr_line += 1
         elif (line.startswith("ENTRY=") and nbr_line == 2):
             entry_list: list[str] = line[6:].split(',')
@@ -53,7 +48,6 @@ def parse_config() -> mapData:
             x_entry: int = found_value(entry_list[0].strip())
             y_entry: int = found_value(entry_list[1].strip())
             entry: tuple[int, int] = (x_entry, y_entry)
-            seen.add("ENTRY")
             nbr_line += 1
         elif (line.startswith("EXIT=") and nbr_line == 3):
             exit_list: list[str] = line[5:].split(',')
@@ -62,13 +56,11 @@ def parse_config() -> mapData:
             x_exit: int = found_value(exit_list[0].strip())
             y_exit: int = found_value(exit_list[1].strip())
             exit: tuple[int, int] = (x_exit, y_exit)
-            seen.add("EXIT")
             nbr_line += 1
         elif (line.startswith("OUTPUT_FILE=") and nbr_line == 4):
             output_file: str = line[12:].strip()
             if (output_file == ''):
                 raise ValueError("OUTPUT_FILE: value can not be empty")
-            seen.add("OUTPUT_FILE")
             nbr_line += 1
         elif (line.startswith("PERFECT=") and nbr_line == 5):
             if (line[8:].strip() == "True"):
@@ -77,16 +69,14 @@ def parse_config() -> mapData:
                 perfect = False
             else:
                 raise ValueError("PERFECT: must be either 'True' or 'False'")
-            seen.add("PERFECT")
             nbr_line += 1
         elif (line.startswith("SEED=") and nbr_line == 6):
             seed: int = found_value(line[5:].strip())
-            seen.add("SEED")
             nbr_line += 1
         else:
             raise ValueError("Invalid, empty, or out-of-order "
                              "configuration field(s)")
-    if nbr_line != 7 or seen != required:
+    if nbr_line != 7:
         raise ValueError("Invalid, empty, or out-of-order configuration "
                          "field(s)")
 
