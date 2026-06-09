@@ -1,5 +1,5 @@
 from MazeGenerator import MazeGenerator
-from map_data import temp_data
+from map_data import parse_config
 from typing import Any
 from mlx_render import App
 from collections import deque
@@ -8,7 +8,7 @@ from mazeSolver import MazeSolver
 
 
 if __name__ == "__main__":
-    map_data = temp_data()
+    map_data = parse_config()
 	
     mazeGen = MazeGenerator(map_data)
     app = App()

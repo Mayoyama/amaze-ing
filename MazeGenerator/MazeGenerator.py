@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from map_data import mapData
 
 
+
 class MazeGenerator:
     """An algorithmic engine responsible for carving perfect 2D grid mazes.
 

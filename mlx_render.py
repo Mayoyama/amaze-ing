@@ -2,10 +2,11 @@ from mlx import Mlx
 from typing import Any
 from MazeGenerator import MazeGenerator
 from mazeSolver import MazeSolver
-from map_data import temp_data, mapData
+from map_data import parse_config, mapData
 from dataclasses import dataclass
 import random
 import os
+from utils import print_map
 
 
 @dataclass
@@ -185,7 +186,7 @@ class Renderer:
 
 class App:
     def __init__(self) -> None:
-        self.map_data = temp_data()
+        self.map_data = parse_config()
         self.mazeGen = MazeGenerator(self.map_data)
         self.grid = self.mazeGen.gen_map()
 
@@ -343,6 +344,7 @@ class App:
 
     def run(self) -> None:
         self.renderer.render_grid(self.path_cells)
+        print_map(self.mazeGen ,self.map_data, self.pathstr)
         self.mlx.mlx_put_image_to_window(
             self.mlx_ptr, self.win,
             self.img, 0, 0)

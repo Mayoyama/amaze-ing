@@ -4,3 +4,4 @@ __pycache__
 .pyc
 .vs
 maze_venv
+output_maze.txt
