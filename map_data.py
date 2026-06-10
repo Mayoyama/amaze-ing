@@ -12,6 +12,7 @@ class mapData:
     output_file: str
     perfect: bool
     seed: int
+    bonus: bool
 
 
 def parse_config() -> mapData:
@@ -73,6 +74,13 @@ def parse_config() -> mapData:
         elif (line.startswith("SEED=") and nbr_line == 6):
             seed: int = found_value(line[5:].strip())
             nbr_line += 1
+        elif (line.startswith("BONUS=") and nbr_line == 7):
+            if (line[6:].strip() == "True"):
+                bonus = True
+            elif (line[6:].strip() == "False"):
+                bonus = False
+            else:
+                raise ValueError("Bonus: must be either 'True' or 'False'")
         else:
             raise ValueError("Invalid, empty, or out-of-order "
                              "configuration field(s)")
@@ -96,4 +104,4 @@ def parse_config() -> mapData:
     if not (0 <= exit[0] < width and 0 <= exit[1] < height):
         raise ValueError("EXIT is outside map bounds")
 
-    return mapData(width, height, entry, exit, output_file, perfect, seed)
+    return mapData(width, height, entry, exit, output_file, perfect, seed, bonus)

@@ -2,12 +2,12 @@ import os
 from random import choice
 from mlx import Mlx
 from dataclasses import dataclass
-from MazeGenerator import MazeGenerator
+from MazeGenerator.MazeGenerator import MazeGenerator
 from map_data import parse_config
 from mlx_render import Renderer, UI_state
 from mazeSolver import MazeSolver
 from utils import print_map
-
+from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
 
 @dataclass(frozen=True)
 class render_settings:
@@ -16,7 +16,7 @@ class render_settings:
     and maze cell size.
     """
     min_win_width: int = 550
-    cell_size: int = 10
+    cell_size: int = 20
     sprite_path: str = "renderer/puffy_tiny.png"
 
 
@@ -50,9 +50,16 @@ class App:
     def __init__(self) -> None:
         self._map_data = parse_config()
         self._mazeGen = MazeGenerator(self._map_data)
-        self._grid = self._mazeGen.gen_map()
+        self._mazeGenBonus = MazeGeneratorBonus(self._map_data)
+
+        if self._map_data.bonus:
+            self._grid = self._mazeGenBonus.gen_map()
+        else:
+            self._grid = self._mazeGen.gen_map()
         self._solver = MazeSolver(self._grid, self._map_data)
         self._path_cells, self._pathstr = self._solver.generate_final_path()
+        
+
 
         self._r_config = render_settings()
         self._ui = UI_state()
@@ -63,7 +70,7 @@ class App:
         if not os.path.exists(self._r_config.sprite_path):
             raise FileNotFoundError(self._r_config.sprite_path)
         self._animation_tick = 0
-        self._sprite_index = 0
+        self._sprite_index = 0 
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
 
         sprite_res = self._mlx.mlx_png_file_to_image(
@@ -119,7 +126,11 @@ class App:
 
     def _regenerate_map(self) -> None:
         self._mazeGen = MazeGenerator(self._map_data)
-        self._grid = self._mazeGen.gen_map()
+        self._mazeGenBonus = MazeGeneratorBonus(self._map_data)
+        if self._map_data.bonus:
+            self._grid = self._mazeGenBonus.gen_map()
+        else:
+            self._grid = self._mazeGen.gen_map()
         self._renderer._grid = self._grid
         self._renderer._fixed_cells = self._mazeGen.fixed_cells
         self._solver = MazeSolver(self._grid, self._map_data)

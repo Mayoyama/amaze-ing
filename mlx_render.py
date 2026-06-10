@@ -9,7 +9,7 @@ class UI_state:
     used by the renderer.
     """
     wall_color: tuple[int, int, int] = (0, 255, 0)
-    logo42_color: tuple[int, int, int] = (255, 255, 255)
+    logo42_color: tuple[int, int, int] = (0, 0, 0)# (255, 255, 255)
     path_color: tuple[int, int, int] = (56, 175, 205)
     show_path: bool = False
     path_animation: bool = False
