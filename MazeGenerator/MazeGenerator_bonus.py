@@ -78,60 +78,6 @@ class MazeGenerator_bonus:
                raise ValueError(f"{name} point at {cell} is out of bounds. Please set a new coordinate.")
            if cell in fixed_cells:
                raise ValueError(f"{name} point at {cell} collides with '42' pattern. Please set a new coordinate.")
-        
-
-    #def _check_valid_neighbors(self, current: tuple[int, int], visited: set[tuple[int, int]], fixed_cells: set[tuple[int, int]]) -> list[tuple[int, int]]:
-    #    """Returns a list of unvisited, non-fixed adjacent cells."""
-    #    valid_neighbors = []
-    #    directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-    #    r, c = current
-
-    #    for dr, dc in directions:
-    #        nextr, nextc = r + dr, c + dc
-    #        if 0 <= nextr < self.height and 0 <= nextc < self.width:
-    #            if (nextr, nextc) not in fixed_cells:
-    #                if (nextr, nextc) not in visited:
-    #                    valid_neighbors.append((nextr, nextc))
-    #    return valid_neighbors
-            
-    #def _open_wall(self, current: tuple[int, int], next_cell: tuple[int, int],) -> None:
-    #    """Removes the shared wall between the current cell and the next cell."""
-    #    curr_r, curr_c = current
-    #    next_r, next_c = next_cell
-
-    #    direction_r = next_r - curr_r
-    #    direction_c = next_c - curr_c
-    #    if direction_r == -1:
-    #        self.grid[curr_r][curr_c] &= ~1
-    #        self.grid[next_r][next_c] &= ~4
-    #    if direction_r == 1:
-    #        self.grid[curr_r][curr_c] &= ~4
-    #        self.grid[next_r][next_c] &= ~1
-    #    if direction_c == -1:
-    #        self.grid[curr_r][curr_c] &= ~8
-    #        self.grid[next_r][next_c] &= ~2
-    #    if direction_c == 1:
-    #        self.grid[curr_r][curr_c] &= ~2
-    #        self.grid[next_r][next_c] &= ~8
-
-    #def _final_map_adjustment(self) -> None:
-    #    if self.height < 3 or self.width < 3:
-    #        return
-
-    #    for scan_r in range(self.height - 2):
-    #        for scan_c in range(self.width - 2):
-    #            is_open_room = True
-    #            for window_r in range(scan_r, scan_r + 3):
-    #                for window_c in range(scan_c, scan_c + 3):
-    #                    if self.grid[window_r][window_c] != 0:
-    #                        is_open_room = False
-    #                        break
-    #                if not is_open_room:
-    #                    break
-
-    #            if is_open_room is True:
-    #                self.grid[scan_r + 1][scan_c + 1] |= 1
-    #                self.grid[scan_r][scan_c + 1] |= 4
 
     def check_neighbors(self, row: int, col: int) -> None:
         if col > 0:
@@ -152,10 +98,8 @@ class MazeGenerator_bonus:
             ft_start_col = 0
             ft_start_row = 0
 
-            ft_end_row = ft_start_row + 4
-            ft_end_col = ft_start_col + 6
         else:
-           ft_start_row = ft_end_row = ft_start_col = ft_end_col = -1
+           ft_start_row = ft_start_col = -1
 
 
         for row in range(self.height):
@@ -188,22 +132,22 @@ class MazeGenerator_bonus:
                     rnd = 4
                 elif col == ft_start_col + 1 and row == ft_start_row + 4:
                     rnd = 4
-                elif col == ft_start_col + 1 and row == ft_start_row + 3:
-                    rnd = 4
-                elif col == ft_start_col + 4 and row == ft_end_row + 1:
-                    rnd = 0
+                elif col == ft_start_col + 4 and row == ft_start_row + 1:
+                    rnd = 2
+                elif col == ft_start_col + 5 and row == ft_start_row + 1:
+                    rnd = 8
                 elif col == ft_start_col + 5 and row == ft_start_row + 3:
                     rnd = 2
                 elif col == ft_start_col + 6 and row == ft_start_row + 3:
                     rnd = 2
-                elif col == ft_start_col + 4 and row == ft_start_row + 5:
-                    rnd = 7
+                elif col == ft_start_col + 3 and row == ft_start_row + 5:
+                    rnd = 15
                 elif is_last_row and is_last_col:
-                    rnd: int = 0
+                    rnd = 0
                 elif is_last_row:
-                    rnd: int = 2
+                    rnd = 2
                 elif is_last_col:
-                    rnd: int = 4
+                    rnd = 4
                 else:
                     rnd: int = random.choice([2, 4])
                 
