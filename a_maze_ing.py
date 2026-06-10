@@ -1,11 +1,24 @@
 import os
 from random import choice
 from mlx import Mlx
+from dataclasses import dataclass
 from MazeGenerator import MazeGenerator
 from map_data import parse_config
-from mlx_render import Renderer, render_settings, UI_state
+from mlx_render import Renderer, UI_state
 from mazeSolver import MazeSolver
 from utils import print_map
+
+
+@dataclass(frozen=True)
+class render_settings:
+    """
+    Stores rendering configuration values such as window dimensions
+    and maze cell size.
+    """
+    min_win_width: int = 550
+    cell_size: int = 10
+    sprite_path: str = "renderer/puffy_tiny.png"
+
 
 class App:
     """Main application controller.
@@ -38,49 +51,47 @@ class App:
         self._map_data = parse_config()
         self._mazeGen = MazeGenerator(self._map_data)
         self._grid = self._mazeGen.gen_map()
-
         self._solver = MazeSolver(self._grid, self._map_data)
         self._path_cells, self._pathstr = self._solver.generate_final_path()
 
         self._r_config = render_settings()
         self._ui = UI_state()
 
-        sprite_path = "renderer/puffy_tiny.png"
-
-        if not os.path.exists(sprite_path):
-            raise FileNotFoundError(sprite_path)
-
         self._mlx = Mlx()
         self._mlx_ptr = self._mlx.mlx_init()
 
+        if not os.path.exists(self._r_config.sprite_path):
+            raise FileNotFoundError(self._r_config.sprite_path)
         self._animation_tick = 0
         self._sprite_index = 0
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
 
-        sprite_result = self._mlx.mlx_png_file_to_image(
+        sprite_res = self._mlx.mlx_png_file_to_image(
             self._mlx_ptr,
-            sprite_path
+            self._r_config.sprite_path
         )
 
-        if not sprite_result or sprite_result[0] is None:
+        if not sprite_res or sprite_res[0] is None:
             raise RuntimeError("MLX failed to load PNG")
 
-        self._sprite_img, self._sprite_width, self._sprite_height = sprite_result
+        self._sprite_img, self._sprite_width, self._sprite_height = sprite_res
 
         self._sprite_data, _, self._sprite_size_line, _ = \
             self._mlx.mlx_get_data_addr(self._sprite_img)
 
         self._win = self._mlx.mlx_new_window(
             self._mlx_ptr,
-            len(self._grid) * self._r_config.cell_size + 140,
-            len(self._grid[0]) * self._r_config.cell_size + 140,  # self._r_config.height,
+            max(self._r_config.min_win_width, (len(self._grid[0]) + 2) *
+                self._r_config.cell_size),
+            (len(self._grid) + 1) * self._r_config.cell_size + 140,
             "A*Maze*ing"
         )
 
         self._img = self._mlx.mlx_new_image(
             self._mlx_ptr,
-            self._r_config.width,
-            self._r_config.height
+            max(self._r_config.min_win_width, (len(self._grid[0]) + 2) *
+                self._r_config.cell_size),
+            (len(self._grid) + 2) * self._r_config.cell_size + 140
         )
 
         self._data, _, self._size_line, _ = \
@@ -117,19 +128,21 @@ class App:
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
 
     def _draw_menu(self) -> None:
-        menu_x = 10
-        menu_y_start = (len(self._grid) * self._r_config.cell_size) + 10
+        menu_x = self._r_config.cell_size
+        menu_y_start = (len(self._grid) * self._r_config.cell_size) + \
+                       (self._r_config.cell_size) + 20
         spacing = 20
         menu_list = [
             "Welcome to A*Maze*Ing! Make you selection:", "",
-            "1: Change maze color                2: Change '42' color",
-            "3: Show/Hide shortest path          4. Toggle animated path",
-            "5: Generate new perfect map         6: Generate new random map",
+            "1: Change maze color         2: Change '42' color",
+            "3: Show/Hide shortest path   4. Toggle animated path",
+            "5: Generate perfect map      6: Generate random map",
             "ESC: Exit"
         ]
         for i, string in enumerate(menu_list):
             menu_y = menu_y_start + (i * spacing)
-            self._mlx.mlx_string_put(self._mlx_ptr, self._win, menu_x, menu_y, 0xFFFFFF, string)
+            self._mlx.mlx_string_put(self._mlx_ptr, self._win, menu_x,
+                                     menu_y, 0xFFFFFF, string)
 
     def _redraw_map(self) -> None:
         self._renderer.clear_map()
@@ -140,7 +153,10 @@ class App:
             self._img, 0, 0)
 
     def _next_color(self) -> tuple[int, int, int]:
-        color_palette: set[tuple[int, int, int]] = {(34, 139, 34), (255, 165, 0), (255, 255, 0), (255, 0, 0), (64, 224, 208), (0, 0, 128), (255, 192, 203), (255, 0, 255)}
+        color_palette: set[tuple[int, int, int]] = {
+            (34, 139, 34), (255, 165, 0), (255, 255, 0), (255, 0, 0),
+            (64, 224, 208), (0, 0, 128), (255, 192, 203), (255, 0, 255)
+        }
         new_color = color_palette.difference({self._ui.wall_color})
         return choice(list(new_color))
 
@@ -150,9 +166,9 @@ class App:
                 self._ui.wall_color = self._next_color()
             elif keycode == 50:
                 self._ui.logo42_color = self._next_color()
-            elif keycode ==  51:
+            elif keycode == 51:
                 self._ui.show_path = not self._ui.show_path
-            elif keycode ==  52:
+            elif keycode == 52:
                 self._ui.path_animation = not self._ui.path_animation
             elif keycode == 53:
                 self._ui.path_animation = False
@@ -191,18 +207,17 @@ class App:
 
         self._mlx.mlx_loop_hook(self._mlx_ptr, update_img, None)
 
-
     def run(self) -> None:
         self._renderer.render_grid(self._path_cells)
-        print_map(self._mazeGen ,self._map_data, self._pathstr)
+        print_map(self._mazeGen, self._map_data, self._pathstr)
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._win,
             self._img, 0, 0)
         self._draw_menu()
         self._mlx.mlx_loop(self._mlx_ptr)
 
+
 if __name__ == "__main__":
-    
     try:
         app = App()
         app.run()

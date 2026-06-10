@@ -3,19 +3,6 @@ from dataclasses import dataclass
 
 
 @dataclass
-class render_settings:
-    """
-    Stores rendering configuration values such as window dimensions
-    and maze cell size.
-    """
-    
-    width: int = 1600
-    height: int = 1000
-    cell_size: int = 10
-# maze size  = maze size + menu!!!
-
-
-@dataclass
 class UI_state:
     """
     Stores mutable UI settings including colors and display toggles
@@ -55,11 +42,14 @@ class Renderer:
         self._size_line = size_line
         self._cell_size = cell_size
         self._map_data = map_data
+        self._margin = self._cell_size
 
         self._sprite_data = None
         self._sprite_size_line = 0
         self._sprite_width = 0
         self._sprite_height = 0
+        self._image_width = (len(self._grid[0]) * self._cell_size + 2 * self._margin)
+        self._image_height = (len(self._grid) * self._cell_size + 2 * self._margin)
 
     @staticmethod
     def _has_N_wall(cell: int) -> bool:
@@ -81,15 +71,19 @@ class Renderer:
         """Returns True/False whether the cell has a west wall"""
         return bool(cell & 8)
 
+    def _cell_to_pixel(self, r: int, c: int) -> tuple[int, int]:
+        x = self._margin + (c * self._cell_size)
+        y = self._margin + (r * self._cell_size)
+        return x, y
+
     def clear_map(self) -> None:
-        """Fill the entire maze image buffer with black pixels."""
-        for r in range(len(self._grid)):
-            for c in range(len(self._grid[0])):
-                x = c * self._cell_size
-                y = r * self._cell_size
-                for cell_x in range(self._cell_size):
-                    for cell_y in range(self._cell_size):
-                        self._put_pixel(x + cell_x, y + cell_y, (0, 0, 0))
+        image_width = (len(self._grid[0]) * self._cell_size) + (2 * self._margin)
+        image_height = (len(self._grid) * self._cell_size) + (2 * self._margin)
+
+        for y in range(image_height):
+            for x in range(image_width):
+                self._put_pixel(x, y, (0, 0, 0))
+
 
     def set_sprite(self, sprite_data, sprite_size_line, sprite_width, sprite_height):
         """Store sprite image data for later rendering."""
@@ -105,8 +99,9 @@ class Renderer:
 
         r, c = sprite_pos
 
-        sprite_x = c * self._cell_size - 8
-        sprite_y = r * self._cell_size - 7
+        sprite_x, sprite_y = self._cell_to_pixel(r, c)
+        sprite_x -= 8
+        sprite_y -= 7
 
         for y in range(self._sprite_height):
             for x in range(self._sprite_width):
@@ -123,7 +118,7 @@ class Renderer:
                 dest_x = sprite_x + x
                 dest_y = sprite_y + y
 
-                if 0 <= dest_x < len(self._grid[0]) * self._cell_size and 0 <= dest_y < len(self._grid) * self._cell_size:
+                if 0 <= dest_x < len(self._grid[0]) * self._image_width and 0 <= dest_y < len(self._grid) * self._image_height:
                     offset = (dest_y * self._size_line) + (dest_x * 4)
 
                     self._data[offset + 0] = b
@@ -157,8 +152,7 @@ class Renderer:
         color = self._ui.path_color
 
         for r, c in path_cells:
-            x = c * self._cell_size
-            y = r * self._cell_size
+            x, y = self._cell_to_pixel(r, c)
 
             for dy in range(2, self._cell_size - 2):
                 for dx in range(2, self._cell_size - 2):
@@ -166,8 +160,7 @@ class Renderer:
 
     def _fill_cell(self, r: int, c: int, color: tuple[int, int, int]) -> None:
         """Loops to fill in every pixel within a cell. Requires RGB to be passed in"""
-        x = c * self._cell_size
-        y = r * self._cell_size
+        x, y = self._cell_to_pixel(r, c)
         for r_offset in range(1, self._cell_size - 1):
             for c_offset in range(1, self._cell_size - 1):
                 self._put_pixel(x + c_offset, y + r_offset, color)
@@ -203,8 +196,7 @@ class Renderer:
         for r in range(len(self._grid)):
             for c in range(len(self._grid[0])):
                 cell = self._grid[r][c]
-                x = c * self._cell_size
-                y = r * self._cell_size
+                x, y = self._cell_to_pixel(r, c)
                 self._draw_cell(x, y, cell)
 
         self._fill_logo42()

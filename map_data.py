@@ -85,7 +85,7 @@ def parse_config() -> mapData:
         raise ValueError("Width and height must be positive")
 
     # CHANGE: Set maximum allowed dimensions to 50
-    if width > 50 or height > 50:
+    if width > 75 or height > 75:
         raise ValueError("Maximum size of map is 50")
 
     # CHANGE: Validate that ENTRY is inside map bounds
