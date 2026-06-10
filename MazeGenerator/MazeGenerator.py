@@ -127,6 +127,14 @@ class MazeGenerator:
         if direction_c == 1:
             self.grid[curr_r][curr_c] &= ~2
             self.grid[next_r][next_c] &= ~8
+    
+    def check_neighbors(self, row: int, col: int) -> None:
+        if col > 0:
+           if self.grid[row][col-1] & 2 == 0:
+              self.grid[row][col] &= ~8
+        if row > 0:
+            if self.grid[row-1][col] & 4 == 0:
+                self.grid[row][col] &= ~1 
 
     def _final_map_adjustment(self) -> None:
         if self.height < 3 or self.width < 3:
@@ -157,6 +165,18 @@ class MazeGenerator:
             if c < self.width - 1:
                 self.grid[r][c + 1] |= 8
             self.grid[r][c] = 15
+        
+        if not self.perfect_map:
+            nbr_break = random.randint(5, 15)
+            for _ in range(nbr_break):
+                random_row = random.randint(1, self.height - 2)
+                random_col = random.randint(1, self.width - 2)
+                if (random_row, random_col) not in self.fixed_cells:
+                    rnd = 15
+                    self.grid[random_row][random_col] &= ~rnd
+            for row in range(self.height):
+                for col in range(self.width):
+                    self.check_neighbors(row, col)
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""

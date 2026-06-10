@@ -16,12 +16,14 @@ class mapData:
 
 
 def parse_config() -> mapData:
-    def found_value(string: str) -> int:
+    """Handeles parsing and checks"""
+    def found_value(string: str, type: str) -> int:
+        """Check if it's digit"""
         if (string.isnumeric()):
             return (int(string))
         else:
-            raise ValueError(f"{string} is not valid. Only integers are "
-                             "allowed")
+            raise ValueError(f"{string} is not valid for '{type}'."
+                            "Only integers are allowed")
 
     # IO layer
     try:
@@ -37,25 +39,25 @@ def parse_config() -> mapData:
         if line.startswith("#"):
             continue
         if (line.startswith("WIDTH=") and nbr_line == 0):
-            width: int = found_value(line[6:].strip())
+            width: int = found_value(line[6:].strip(), "WIDTH")
             nbr_line += 1
         elif (line.startswith("HEIGHT=") and nbr_line == 1):
-            height: int = found_value(line[7:].strip())
+            height: int = found_value(line[7:].strip(), "WIDTH")
             nbr_line += 1
         elif (line.startswith("ENTRY=") and nbr_line == 2):
             entry_list: list[str] = line[6:].split(',')
             if (len(entry_list) != 2):
                 raise ValueError("ENTRY: value should be 'ENTRY=x,y'")
-            x_entry: int = found_value(entry_list[0].strip())
-            y_entry: int = found_value(entry_list[1].strip())
+            x_entry: int = found_value(entry_list[1].strip(), "ENTRY(x)")
+            y_entry: int = found_value(entry_list[0].strip(), "ENTRY(y)")
             entry: tuple[int, int] = (x_entry, y_entry)
             nbr_line += 1
         elif (line.startswith("EXIT=") and nbr_line == 3):
             exit_list: list[str] = line[5:].split(',')
             if (len(exit_list) != 2):
                 raise ValueError("EXIT: value should be 'EXIT=x,y'")
-            x_exit: int = found_value(exit_list[0].strip())
-            y_exit: int = found_value(exit_list[1].strip())
+            x_exit: int = found_value(exit_list[1].strip(), "EXIT(X)")
+            y_exit: int = found_value(exit_list[0].strip(), "EXIT(y)")
             exit: tuple[int, int] = (x_exit, y_exit)
             nbr_line += 1
         elif (line.startswith("OUTPUT_FILE=") and nbr_line == 4):
@@ -72,7 +74,7 @@ def parse_config() -> mapData:
                 raise ValueError("PERFECT: must be either 'True' or 'False'")
             nbr_line += 1
         elif (line.startswith("SEED=") and nbr_line == 6):
-            seed: int = found_value(line[5:].strip())
+            seed: int = found_value(line[5:].strip(), "SEED")
             nbr_line += 1
         elif (line.startswith("BONUS=") and nbr_line == 7):
             if (line[6:].strip() == "True"):

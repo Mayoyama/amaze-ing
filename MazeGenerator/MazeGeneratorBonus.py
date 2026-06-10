@@ -19,12 +19,17 @@ class MazeGeneratorBonus:
         grid (list): The internal 2D list matrix representing the maze layout.
         pattern_42 (matrix): The template for the '42' pattern that must appear in the middle of the generated map.
     """
+    # Row 0: █ . . . █ █ █
+    # Row 1: █ . █ . . . █
+    # Row 2: █ █ █ . █ █ █
+    # Row 3: . . █ . █ . .
+    # Row 4: . . █ . █ █ █
     pattern_42 = [
-        [1, 0, 0, 0, 1, 1, 1],  # Row 0: █ . . . █ █ █
-        [1, 0, 1, 0, 0, 0, 1],  # Row 1: █ . █ . . . █
-        [1, 1, 1, 0, 1, 1, 1],  # Row 2: █ █ █ . █ █ █
-        [0, 0, 1, 0, 1, 0, 0],  # Row 3: . . █ . █ . .
-        [0, 0, 1, 0, 1, 1, 1],  # Row 4: . . █ . █ █ █
+        [0, 6, 10, 12, 0, 0, 0],     # Row 0: █ . . . █ █ █
+        [0, 1, 0, 7, 10, 8, 0],     # Row 1: █ . █ . . . █
+        [0, 0, 0, 5, 0, 0, 0],      # Row 2: █ █ █ . █ █ █
+        [6, 12, 0, 5, 0, 2, 10],    # Row 3: . . █ . █ . .
+        [1, 13, 0, 5, 0, 0, 0],      # Row 4: . . █ . █ █ █
     ]
 
     def __init__(self, data: dataclass) -> None:
@@ -36,6 +41,7 @@ class MazeGeneratorBonus:
         self.start_point = data.entry
         self.end_point = data.exit
         self.perfect_map = data.perfect
+        self.fixed_cells = self._embed_42_pattern()
 
 
     def _initialize_empty_grid(self) -> list[list[int]]:
@@ -67,17 +73,20 @@ class MazeGeneratorBonus:
                     ft_grid_r = ft_start_row + r
                     ft_grid_c = ft_start_col + c
 
-                    if self.pattern_42[r][c] == 1:
-                        fixed_42_cells.add((ft_grid_r, ft_grid_c))
+                    fixed_42_cells.add((ft_grid_r, ft_grid_c))
         return fixed_42_cells
 
-    def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
-       for name, cell in [("Start", self.start_point), ("End", self.end_point)]:
-           r, c = cell
-           if not (0 <= r < self.height and 0 <= c < self.width):
-               raise ValueError(f"{name} point at {cell} is out of bounds. Please set a new coordinate.")
-           if cell in fixed_cells:
-               raise ValueError(f"{name} point at {cell} collides with '42' pattern. Please set a new coordinate.")
+    def _validate_point(self) -> None:
+        for name, cell in [("Start", self.start_point),
+                           ("End", self.end_point)]:
+            r, c = cell
+            if not (0 <= r < self.height
+                    and 0 <= c < self.width):
+                raise ValueError(f"{name} point at {cell} is out of "
+                                 "bounds. Please set a new coordinate.")
+            if cell in self.fixed_cells:
+                raise ValueError(f"{name} point at {cell} collides with '42' "
+                                 "pattern. Please set a new coordinate.")
 
     def check_neighbors(self, row: int, col: int) -> None:
         if col > 0:
@@ -90,69 +99,39 @@ class MazeGeneratorBonus:
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
         random.seed(self.seed)
-        fixed_cells = self._embed_42_pattern()
-
-        self._validate_point(fixed_cells)
-        
-        if self._can_fit_42():
-            ft_start_col = 0
-            ft_start_row = 0
-
-        else:
-           ft_start_row = ft_start_col = -1
-
+        self._validate_point()
 
         for row in range(self.height):
             for col in range(self.width):
-                if (row, col) in fixed_cells:
-                    continue
-
-                is_last_row = (row == self.height - 1)
-                is_last_col = (col == self.width - 1)
-                
-                if col == ft_start_col + 1 and row == ft_start_row:
-                    rnd = 6
-                elif col == ft_start_col + 1 and row == ft_start_row + 1:
-                    rnd  = 1
-                elif col == ft_start_col + 2 and row == ft_start_row:
-                    rnd = 2
-                elif col == ft_start_col + 3 and row == ft_start_row:
-                    rnd = 4
-                elif col == ft_start_col + 3 and row == ft_start_row + 1:
-                    rnd = 6
-                elif col == ft_start_col + 3 and row == ft_start_row + 2:
-                    rnd = 4
-                elif col == ft_start_col + 3 and row == ft_start_row + 3:
-                    rnd = 4
-                elif col == ft_start_col + 3 and row == ft_start_row + 4:
-                    rnd = 4
-                elif col == ft_start_col and row == ft_start_row + 3:
-                    rnd = 2
-                elif col == ft_start_col + 1 and row == ft_start_row + 3:
-                    rnd = 4
-                elif col == ft_start_col + 1 and row == ft_start_row + 4:
-                    rnd = 4
-                elif col == ft_start_col + 4 and row == ft_start_row + 1:
-                    rnd = 2
-                elif col == ft_start_col + 5 and row == ft_start_row + 1:
-                    rnd = 8
-                elif col == ft_start_col + 5 and row == ft_start_row + 3:
-                    rnd = 2
-                elif col == ft_start_col + 6 and row == ft_start_row + 3:
-                    rnd = 2
-                elif col == ft_start_col + 3 and row == ft_start_row + 5:
-                    rnd = 15
-                elif is_last_row and is_last_col:
-                    rnd = 0
-                elif is_last_row:
-                    rnd = 2
-                elif is_last_col:
-                    rnd = 4
+                if (row, col) in self.fixed_cells:
+                    rnd = self.pattern_42[row][col]
                 else:
-                    rnd: int = random.choice([2, 4])
-                
+                    is_last_row = (row == self.height - 1)
+                    is_last_col = (col == self.width - 1)
+    
+                    if is_last_row and is_last_col:
+                        rnd = 0
+                    elif is_last_row:
+                        rnd = 2
+                    elif is_last_col:
+                        rnd = 4
+                    else:
+                        rnd: int = random.choice([2, 4])
+
                 if rnd != 0:
                     self.grid[row][col] &= ~rnd
                 self.check_neighbors(row, col)
+
+        if not self.perfect_map:
+            nbr_break = random.randint(5, 15)
+            for _ in range(nbr_break):
+                random_row = random.randint(1, self.height - 2)
+                random_col = random.randint(1, self.width - 2)
+                if (random_row, random_col) not in self.fixed_cells:
+                    rnd = 15
+                    self.grid[random_row][random_col] &= ~rnd
+            for row in range(self.height):
+                for col in range(self.width):
+                    self.check_neighbors(row, col)
                 
         return self.grid

@@ -25,6 +25,29 @@ Illia
 - Output file format
 - configuration file format/parsing
 
+Illia Notes:
+check bounds:
+
+WIDTH=5
+HEIGHT=3
+ENTRY=1,1
+EXIT=3,2
+OUTPUT_FILE=output_maze.txt
+PERFECT=False
+SEED=42
+BONUS=True
+
+WIDTH=5
+HEIGHT=2
+ENTRY=1,1
+EXIT=3,1
+OUTPUT_FILE=output_maze.txt
+PERFECT=False
+SEED=42
+BONUS=True
+
+Entry and exit point move by wrong axe
+
 
 
 
@@ -44,8 +67,11 @@ Illia
 # Common State Examples:
 # - 15 (0xF / 1111) -> All 4 walls CLOSED (Initial grid state)
 # -  0 (0x0 / 0000) -> Crossroads; all 4 walls OPEN
-# - 11 (0xB / 1011) -> South wall is OPEN; North, East, West are CLOSED
-# - 10 (0xA / 1010) -> East and West CLOSED; North and South OPEN (Vertical Hall)
+# - 11 (0xB / 1011) -> South wall is OPEN; North, East, West are CLOSED | ̅ |
+# - 10 (0xA / 1010) -> East and West CLOSED; North and South OPEN (Vertical Hall) | |
+# - 9  (ox9 / 1001) -> North and West CLOSED; | ̅ 
+# - 3  (ox3 / 0011) -> North and East CLOSED;  ̅ |
+
 # ==============================================================================
 
 # A map of directions to: (row_offset, col_offset, wall_bit, opposite_wall_bit)
