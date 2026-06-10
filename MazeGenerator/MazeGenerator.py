@@ -41,6 +41,10 @@ class MazeGenerator:
         self.perfect_map = data.perfect
         self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern()
 
+    @staticmethod
+    def _convert_rc_to_xy(r: int, c: int) -> tuple[int, int]:
+            return (c + 1, r + 1)
+
     def _initialize_empty_grid(self) -> list[list[int]]:
         """creates and initializes the grid to be used in map generation."""
         grid: list[list[int]] = []
@@ -78,17 +82,14 @@ class MazeGenerator:
                         fixed_42_cells.add((ft_grid_r, ft_grid_c))
         return fixed_42_cells
 
-    def _validate_point(self) -> None:
-        for name, cell in [("Start", self.start_point),
-                           ("End", self.end_point)]:
-            r, c = cell
-            if not (0 <= r < self.height
-                    and 0 <= c < self.width):
-                raise ValueError(f"{name} point at {cell} is out of "
-                                 "bounds. Please set a new coordinate.")
-            if cell in self.fixed_cells:
-                raise ValueError(f"{name} point at {cell} collides with '42' "
-                                 "pattern. Please set a new coordinate.")
+    def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
+       for name, cell in [("ENTRY", self.start_point), ("EXIT", self.end_point)]:
+           r, c = cell
+           x, y = self._convert_rc_to_xy(r, c)
+           if not (0 <= r < self.height and 0 <= c < self.width):
+               raise ValueError(f"{name}: ({x}, {y}) is out of bounds.")
+           if cell in fixed_cells:
+               raise ValueError(f"{name}: ({x}, {y}) collides with '42' pattern.")
 
     def _check_valid_neighbors(self, current: tuple[int, int],
                                visited: set[tuple[int,

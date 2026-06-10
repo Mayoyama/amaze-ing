@@ -36,7 +36,11 @@ class MazeGeneratorBonus:
         self.start_point = data.entry
         self.end_point = data.exit
         self.perfect_map = data.perfect
+        self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern()
 
+    @staticmethod
+    def _convert_rc_to_xy(r: int, c: int) -> tuple[int, int]:
+            return (c + 1, r + 1)
 
     def _initialize_empty_grid(self) -> list[list[int]]:
         """creates and initializes the grid to be used in map generation."""
@@ -72,12 +76,13 @@ class MazeGeneratorBonus:
         return fixed_42_cells
 
     def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
-       for name, cell in [("Start", self.start_point), ("End", self.end_point)]:
+       for name, cell in [("ENTRY", self.start_point), ("EXIT", self.end_point)]:
            r, c = cell
+           x, y = self._convert_rc_to_xy(r, c)
            if not (0 <= r < self.height and 0 <= c < self.width):
-               raise ValueError(f"{name} point at {cell} is out of bounds. Please set a new coordinate.")
+               raise ValueError(f"{name}: ({x}, {y}) is out of bounds.")
            if cell in fixed_cells:
-               raise ValueError(f"{name} point at {cell} collides with '42' pattern. Please set a new coordinate.")
+               raise ValueError(f"{name}: ({x}, {y}) collides with '42' pattern.")
 
     def check_neighbors(self, row: int, col: int) -> None:
         if col > 0:
@@ -90,9 +95,9 @@ class MazeGeneratorBonus:
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
         random.seed(self.seed)
-        fixed_cells = self._embed_42_pattern()
+        # fixed_cells = self._embed_42_pattern()
 
-        self._validate_point(fixed_cells)
+        self._validate_point(self.fixed_cells)
         
         if self._can_fit_42():
             ft_start_col = 0
@@ -104,7 +109,7 @@ class MazeGeneratorBonus:
 
         for row in range(self.height):
             for col in range(self.width):
-                if (row, col) in fixed_cells:
+                if (row, col) in self.fixed_cells:
                     continue
 
                 is_last_row = (row == self.height - 1)

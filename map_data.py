@@ -16,12 +16,13 @@ class mapData:
 
 
 def parse_config() -> mapData:
-    def found_value(string: str) -> int:
-        if (string.isnumeric()):
-            return (int(string))
+    def found_value(param: str, value: str) -> int:
+        if (value.isnumeric()):
+            return (int(value))
         else:
-            raise ValueError(f"{string} is not valid. Only integers are "
-                             "allowed")
+            if len(value) == 0:
+                value = "Empty value"
+            raise ValueError(f"{param}: {value} is not valid")
 
     # IO layer
     try:
@@ -32,37 +33,51 @@ def parse_config() -> mapData:
 
     nbr_line = 0
     for line in lines:
-        if line.strip() == '':
+        if line.strip() == '' or line.startswith("#"):
             continue
-        if line.startswith("#"):
-            continue
+        
         if (line.startswith("WIDTH=") and nbr_line == 0):
-            width: int = found_value(line[6:].strip())
+            width: int = found_value("WIDTH", line[6:].strip())
             nbr_line += 1
+        
         elif (line.startswith("HEIGHT=") and nbr_line == 1):
-            height: int = found_value(line[7:].strip())
+            height: int = found_value("HEIGHT", line[7:].strip())
             nbr_line += 1
-        elif (line.startswith("ENTRY=") and nbr_line == 2):
-            entry_list: list[str] = line[6:].split(',')
-            if (len(entry_list) != 2):
+        
+        elif line.startswith("ENTRY=") and nbr_line == 2:
+            entry_parts = line[6:].split(',')
+            if len(entry_parts) != 2:
                 raise ValueError("ENTRY: value should be 'ENTRY=x,y'")
-            x_entry: int = found_value(entry_list[0].strip())
-            y_entry: int = found_value(entry_list[1].strip())
-            entry: tuple[int, int] = (x_entry, y_entry)
+            # config format: (x, y), user inputs top-left corner as (1, 1)
+            entry_x: int = found_value("ENTRY (x,y)", entry_parts[0].strip())
+            entry_y: int = found_value("ENTRY (x,y)", entry_parts[1].strip())
+            if entry_x <= 0 or entry_y <= 0:
+                raise ValueError("ENTRY: co-ordinate values must be >= 1")
+            
+            # internal format: (row, col) = (y, x), top-left as (0, 0)
+            entry: tuple[int, int] = (entry_y -1, entry_x -1)
             nbr_line += 1
-        elif (line.startswith("EXIT=") and nbr_line == 3):
-            exit_list: list[str] = line[5:].split(',')
-            if (len(exit_list) != 2):
+
+        elif line.startswith("EXIT=") and nbr_line == 3:
+            exit_parts = line[5:].split(',')
+            if len(exit_parts) != 2:
                 raise ValueError("EXIT: value should be 'EXIT=x,y'")
-            x_exit: int = found_value(exit_list[0].strip())
-            y_exit: int = found_value(exit_list[1].strip())
-            exit: tuple[int, int] = (x_exit, y_exit)
+            # config format: (x, y), user inputs top-left corner as (1, 1)
+            exit_x: int = found_value("EXIT (x,y)", exit_parts[0].strip())
+            exit_y: int = found_value("EXIT (x,y)", exit_parts[1].strip())
+            if exit_x <= 0 or exit_y <= 0:
+                raise ValueError("EXIT: co-ordinate values must be >= 1")
+            
+            # internal format: (row, col) = (y, x), top-left as (0, 0)
+            exit: tuple[int, int] = (exit_y - 1, exit_x - 1)
             nbr_line += 1
+
         elif (line.startswith("OUTPUT_FILE=") and nbr_line == 4):
             output_file: str = line[12:].strip()
             if (output_file == ''):
                 raise ValueError("OUTPUT_FILE: value can not be empty")
             nbr_line += 1
+
         elif (line.startswith("PERFECT=") and nbr_line == 5):
             if (line[8:].strip() == "True"):
                 perfect = True
@@ -71,9 +86,11 @@ def parse_config() -> mapData:
             else:
                 raise ValueError("PERFECT: must be either 'True' or 'False'")
             nbr_line += 1
+
         elif (line.startswith("SEED=") and nbr_line == 6):
-            seed: int = found_value(line[5:].strip())
+            seed: int = found_value("SEED", line[5:].strip())
             nbr_line += 1
+
         elif (line.startswith("BONUS=") and nbr_line == 7):
             if (line[6:].strip() == "True"):
                 bonus = True
@@ -97,11 +114,11 @@ def parse_config() -> mapData:
         raise ValueError("Maximum size of map is 50")
 
     # CHANGE: Validate that ENTRY is inside map bounds
-    if not (0 <= entry[0] < width and 0 <= entry[1] < height):
+    if not (0 <= entry[0] < height and 0 <= entry[1] < width):
         raise ValueError("ENTRY is outside map bounds")
 
     # CHANGE: Validate that EXIT is inside map bounds
-    if not (0 <= exit[0] < width and 0 <= exit[1] < height):
+    if not (0 <= exit[0] < height and 0 <= exit[1] < width):
         raise ValueError("EXIT is outside map bounds")
 
     return mapData(width, height, entry, exit, output_file, perfect, seed, bonus)

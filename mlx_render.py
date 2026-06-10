@@ -9,7 +9,7 @@ class UI_state:
     used by the renderer.
     """
     wall_color: tuple[int, int, int] = (0, 255, 0)
-    logo42_color: tuple[int, int, int] = (0, 0, 0)# (255, 255, 255)
+    logo42_color: tuple[int, int, int] = (0, 180, 0)# (255, 255, 255)
     path_color: tuple[int, int, int] = (56, 175, 205)
     show_path: bool = False
     path_animation: bool = False
@@ -34,7 +34,7 @@ class Renderer:
         _ui: Shared UI state containing colors and display options.
     """
 
-    def __init__(self, grid: list[list[int]], map_data: mapData, fixed_cells: set[tuple[int, int]], data: memoryview, size_line: int, cell_size: int, ui: UI_state) -> None:
+    def __init__(self, grid: list[list[int]], map_data: mapData, fixed_cells: set[tuple[int, int]], data: memoryview, img_w: int, img_h: int, size_line: int, cell_size: int, ui: UI_state) -> None:
         self._grid = grid
         self._fixed_cells = fixed_cells
         self._ui = ui
@@ -48,8 +48,8 @@ class Renderer:
         self._sprite_size_line = 0
         self._sprite_width = 0
         self._sprite_height = 0
-        self._image_width = (len(self._grid[0]) * self._cell_size + 2 * self._margin)
-        self._image_height = (len(self._grid) * self._cell_size + 2 * self._margin)
+        self._image_width = img_w
+        self._image_height = img_h
 
     @staticmethod
     def _has_N_wall(cell: int) -> bool:
@@ -77,13 +77,9 @@ class Renderer:
         return x, y
 
     def clear_map(self) -> None:
-        image_width = (len(self._grid[0]) * self._cell_size) + (2 * self._margin)
-        image_height = (len(self._grid) * self._cell_size) + (2 * self._margin)
-
-        for y in range(image_height):
-            for x in range(image_width):
+        for y in range(self._image_height):
+            for x in range(self._image_width):
                 self._put_pixel(x, y, (0, 0, 0))
-
 
     def set_sprite(self, sprite_data, sprite_size_line, sprite_width, sprite_height):
         """Store sprite image data for later rendering."""
@@ -118,7 +114,7 @@ class Renderer:
                 dest_x = sprite_x + x
                 dest_y = sprite_y + y
 
-                if 0 <= dest_x < len(self._grid[0]) * self._image_width and 0 <= dest_y < len(self._grid) * self._image_height:
+                if 0 <= dest_x < self._image_width and 0 <= dest_y < self._image_height:
                     offset = (dest_y * self._size_line) + (dest_x * 4)
 
                     self._data[offset + 0] = b
