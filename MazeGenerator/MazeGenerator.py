@@ -68,29 +68,13 @@ class MazeGenerator:
         if not self._can_fit_42():
             return fixed_42_cells
 
-        if self.bonus or (self.height == 6 and self.width == 8):
-            ft_start_row = 0
-            ft_start_col = 0
-        else:
-            ft_start_row = (self.height - 5) // 2
-            ft_start_col = (self.width - 7) // 2
+        start_row = 0
+        start_col = 0
 
-        def build_42_set(sr, sc):
-            return {
-                (sr + r, sc + c)
-                for r in range(5)
-                for c in range(7)
-                if self.pattern_42[r][c] == 1
-            }
-
-        fixed_42_cells = build_42_set(ft_start_row, ft_start_col)
-
-        # fallback ONLY for non-bonus
-        if not self.bonus:
-            if (self.start_point in fixed_42_cells
-                or self.end_point in fixed_42_cells
-            ):
-                fixed_42_cells = build_42_set(0, 0)
+        for r in range(5):
+            for c in range(7):
+                if self.pattern_42[r][c] == 1:
+                    fixed_42_cells.add((start_row + r, start_col + c))
 
         return fixed_42_cells
 
@@ -141,6 +125,21 @@ class MazeGenerator:
             self.grid[curr_r][curr_c] &= ~2
             self.grid[next_r][next_c] &= ~8
 
+    def check_neighbors(self, row: int, col: int) -> None:
+        if (row, col) not in self.fixed_cells:
+            if col >= 0:
+                if self.grid[row][col-1] & 2 == 0:
+                    self.grid[row][col] &= ~8
+            if col + 1 < self.width:
+                if self.grid[row][col+1] & 8 == 0:
+                    self.grid[row][col] &= ~2
+            if row >= 0:
+                if self.grid[row-1][col] & 4 == 0:
+                    self.grid[row][col] &= ~1
+            if row + 1 < self.height:
+                if self.grid[row+1][col] & 1 == 0:
+                    self.grid[row][col] &= ~4
+
     def _final_map_adjustment(self) -> None:
         if self.height < 3 or self.width < 3:
             return
@@ -170,17 +169,54 @@ class MazeGenerator:
             if c < self.width - 1:
                 self.grid[r][c + 1] |= 8
             self.grid[r][c] = 15
+        
+        if not self.perfect_map:
+            protected_cells: set[tuple[int, int]] = set()
+
+            if self._can_fit_42():
+                logo_42_start_row = 0
+                logo_42_start_col = 0
+
+                for r in range(5):
+                    for c in range(7):
+                        ft_grid_r = logo_42_start_row + r
+                        ft_grid_c = logo_42_start_col + c
+
+                        protected_cells.add((ft_grid_r, ft_grid_c))
+
+                        if ft_grid_r == logo_42_start_row:
+                            protected_cells.add((ft_grid_r - 1, ft_grid_c))
+
+                        if ft_grid_r == logo_42_start_row + 4:
+                            protected_cells.add((ft_grid_r + 1, ft_grid_c))
+
+                        if ft_grid_c == logo_42_start_col:
+                            protected_cells.add((ft_grid_r, ft_grid_c - 1))
+
+                        if ft_grid_c == logo_42_start_col + 6:
+                            protected_cells.add((ft_grid_r, ft_grid_c + 1))
+
+            nbr_break = random.randint(5, 15)
+            for _ in range(nbr_break):
+                random_row = random.randint(1, self.height - 2)
+                random_col = random.randint(1, self.width - 2)
+                if (random_row, random_col) not in protected_cells:
+                    rnd = 15
+                    self.grid[random_row][random_col] &= ~rnd
+            for row in range(self.height):
+                for col in range(self.width):
+                    self.check_neighbors(row, col)
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
         random.seed(self.seed)
 
-        self._validate_point(self.fixed_cells)
+        self._validate_point()
 
         if self._can_fit_42():
-            ft_start_row = (self.height - 5) // 2
-            ft_start_col = (self.width - 7) // 2
-            start_cell = (ft_start_row + 2, ft_start_col + 1)
+            logo_42_start_row = (self.height - 5) // 2
+            logo_42_start_col = (self.width - 7) // 2
+            start_cell = (logo_42_start_row + 2, logo_42_start_col + 1)
         else:
             start_cell = (self.height - 1, 0)
 

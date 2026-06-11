@@ -17,7 +17,7 @@ class render_settings:
     and maze cell size.
     """
     min_win_width: int = 550
-    cell_size: int = 10
+    cell_size: int = 20
     sprite_path: str = "renderer/puffy_tiny.png"
 
 
@@ -214,8 +214,8 @@ class App:
                 self._regenerate_map()
             elif keycode == 54:
                 self._ui.animate_sprite = False
-                # self._map_data.perfect = False  (FALSE NOT IMPLEMENTED YET)
                 self._map_data.bonus = False
+                self._map_data.perfect = False  # (FALSE NOT IMPLEMENTED YET)
                 self._map_data.seed += 1
                 self._regenerate_map()
             elif keycode == 55:
@@ -227,8 +227,8 @@ class App:
                  # implement perfect bonus maze
             elif keycode == 56:
                 self._ui.animate_sprite = False
-                # self._map_data.perfect = False
                 self._map_data.bonus = True
+                self._map_data.perfect = False
                 self._map_data.seed += 1
                 self._regenerate_map()
                  # implement non perfect bonus maze
