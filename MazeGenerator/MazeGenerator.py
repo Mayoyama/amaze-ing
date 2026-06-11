@@ -39,7 +39,7 @@ class MazeGenerator:
         self.start_point = data.entry
         self.end_point = data.exit
         self.perfect_map = data.perfect
-        self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern()
+        self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern(0)
 
     def _initialize_empty_grid(self) -> list[list[int]]:
         """creates and initializes the grid to be used in map generation."""
@@ -58,7 +58,7 @@ class MazeGenerator:
             return False
         return True
 
-    def _embed_42_pattern(self) -> set[tuple[int, int]]:
+    def _embed_42_pattern(self, perfect: int) -> set[tuple[int, int]]:
         """Returns set[tuple[int, int]] to embed '4 2' correctly on the map"""
         fixed_42_cells: set[tuple[int, int]] = set()
 
@@ -74,8 +74,12 @@ class MazeGenerator:
                     ft_grid_r = ft_start_row + r
                     ft_grid_c = ft_start_col + c
 
-                    if self.pattern_42[r][c] == 1:
-                        fixed_42_cells.add((ft_grid_r, ft_grid_c))
+                    if perfect == 0:
+                        if self.pattern_42[r][c] == 1:
+                            fixed_42_cells.add((ft_grid_r, ft_grid_c))
+                    else:
+                        if self.pattern_42[r][c] >= 0:
+                            fixed_42_cells.add((ft_grid_r, ft_grid_c))
         return fixed_42_cells
 
     def _validate_point(self) -> None:
@@ -130,11 +134,15 @@ class MazeGenerator:
     
     def check_neighbors(self, row: int, col: int) -> None:
         if col > 0:
-           if self.grid[row][col-1] & 2 == 0:
-              self.grid[row][col] &= ~8
+            if self.grid[row][col-1] & 2 == 0:
+                self.grid[row][col] &= ~8
+            if self.grid[row][col+1] & 1 == 0:
+                self.grid[row][col] &= ~2
         if row > 0:
             if self.grid[row-1][col] & 4 == 0:
-                self.grid[row][col] &= ~1 
+                self.grid[row][col] &= ~1
+            if self.grid[row+1][col] & 3 == 0:
+                self.grid[row][col] &= ~4
 
     def _final_map_adjustment(self) -> None:
         if self.height < 3 or self.width < 3:
@@ -167,6 +175,7 @@ class MazeGenerator:
             self.grid[r][c] = 15
         
         if not self.perfect_map:
+            self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern(1)
             nbr_break = random.randint(5, 15)
             for _ in range(nbr_break):
                 random_row = random.randint(1, self.height - 2)
