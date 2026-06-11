@@ -26,6 +26,10 @@ Illia
 - configuration file format/parsing
 
 Illia Notes:
+Output file, check check_neighbors
+Input file, it should be by arguments to the program
+Readme file
+
 check bounds:
 
 WIDTH=5
