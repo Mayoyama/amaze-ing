@@ -125,4 +125,8 @@ def parse_config() -> mapData:
     if not (0 <= exit[0] < height and 0 <= exit[1] < width):
         raise ValueError("EXIT is outside map bounds")
 
+    #CHANGE: Validate that EXIT and ENTRY is in different point
+    if (exit == entry):
+        raise ValueError("EXIT and ENTER should be in the different point!")
+
     return mapData(width, height, entry, exit, output_file, perfect, seed, bonus)
