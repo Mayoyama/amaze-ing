@@ -39,6 +39,7 @@ class MazeGenerator:
         self.start_point = data.entry
         self.end_point = data.exit
         self.perfect_map = data.perfect
+        self.bonus = data.bonus
         self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern()
 
     @staticmethod
@@ -58,28 +59,39 @@ class MazeGenerator:
 
     def _can_fit_42(self) -> bool:
         """Check if maze dimensions are large enough to hold '42' pattern."""
-        if self.height < 6 or self.width < 8:
-            return False
-        return True
+        return self.height >= 6 and self.width >= 8
 
     def _embed_42_pattern(self) -> set[tuple[int, int]]:
         """Returns set[tuple[int, int]] to embed '4 2' correctly on the map"""
         fixed_42_cells: set[tuple[int, int]] = set()
 
-        if self._can_fit_42():
-            if self.height == 6 and self.width == 8:
-                ft_start_row = 0
-                ft_start_col = 0
-            else:
-                ft_start_row = (self.height - 5) // 2
-                ft_start_col = (self.width - 7) // 2
-            for r in range(5):
-                for c in range(7):
-                    ft_grid_r = ft_start_row + r
-                    ft_grid_c = ft_start_col + c
+        if not self._can_fit_42():
+            return fixed_42_cells
 
-                    if self.pattern_42[r][c] == 1:
-                        fixed_42_cells.add((ft_grid_r, ft_grid_c))
+        if self.bonus or (self.height == 6 and self.width == 8):
+            ft_start_row = 0
+            ft_start_col = 0
+        else:
+            ft_start_row = (self.height - 5) // 2
+            ft_start_col = (self.width - 7) // 2
+
+        def build_42_set(sr, sc):
+            return {
+                (sr + r, sc + c)
+                for r in range(5)
+                for c in range(7)
+                if self.pattern_42[r][c] == 1
+            }
+
+        fixed_42_cells = build_42_set(ft_start_row, ft_start_col)
+
+        # fallback ONLY for non-bonus
+        if not self.bonus:
+            if (self.start_point in fixed_42_cells
+                or self.end_point in fixed_42_cells
+            ):
+                fixed_42_cells = build_42_set(0, 0)
+
         return fixed_42_cells
 
     def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
@@ -163,7 +175,7 @@ class MazeGenerator:
         """Generates the full maze layout, embedding the 42 pattern first."""
         random.seed(self.seed)
 
-        self._validate_point()
+        self._validate_point(self.fixed_cells)
 
         if self._can_fit_42():
             ft_start_row = (self.height - 5) // 2

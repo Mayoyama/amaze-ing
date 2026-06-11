@@ -12,7 +12,8 @@ class UI_state:
     logo42_color: tuple[int, int, int] = (0, 180, 0)# (255, 255, 255)
     path_color: tuple[int, int, int] = (56, 175, 205)
     show_path: bool = False
-    path_animation: bool = False
+    animate_sprite: bool = False
+    show_sprite: bool = False
 
 
 class Renderer:

@@ -6,6 +6,7 @@ matrix of walls into an open, perfect maze layout.
 
 import random
 from dataclasses import dataclass
+from collections import deque
 
 
 class MazeGeneratorBonus:
@@ -161,3 +162,58 @@ class MazeGeneratorBonus:
                 self.check_neighbors(row, col)
                 
         return self.grid
+"""
+    # DEBUGGING
+    def debug_unreachable_cells(self) -> None:
+        '''
+        DEBUG ONLY:
+        Prints all cells that are NOT reachable from ENTRY.
+        Does not modify the maze.
+        '''
+
+        height = self.height
+        width = self.width
+        start = self.start_point
+
+        def can_move(r1, c1, r2, c2):
+            dr, dc = r2 - r1, c2 - c1
+
+            if dr == -1:
+                return (self.grid[r1][c1] & 1) == 0
+            if dr == 1:
+                return (self.grid[r1][c1] & 4) == 0
+            if dc == -1:
+                return (self.grid[r1][c1] & 8) == 0
+            if dc == 1:
+                return (self.grid[r1][c1] & 2) == 0
+            return False
+
+        visited = set([start])
+        queue = deque([start])
+
+        # BFS from ENTRY
+        while queue:
+            r, c = queue.popleft()
+
+            for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+                nr, nc = r + dr, c + dc
+
+                if 0 <= nr < height and 0 <= nc < width:
+                    if (nr, nc) not in visited:
+                        if can_move(r, c, nr, nc):
+                            visited.add((nr, nc))
+                            queue.append((nr, nc))
+
+        # collect unreachable cells
+        unreachable = [
+            (r, c)
+            for r in range(height)
+            for c in range(width)
+            if (r, c) not in visited
+            and (r, c) not in self.fixed_cells
+        ]
+
+        print("UNREACHABLE CELLS FROM ENTRY:")
+        print(unreachable)
+        print(f"Total: {len(unreachable)}")
+"""

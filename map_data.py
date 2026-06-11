@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-# 
+from random import randint
 from typing import Any
 
 
@@ -88,7 +88,11 @@ def parse_config() -> mapData:
             nbr_line += 1
 
         elif (line.startswith("SEED=") and nbr_line == 6):
-            seed: int = found_value("SEED", line[5:].strip())
+            """
+            DEBUGGING
+            """
+
+            seed: int = randint(1, 100)    # found_value("SEED", line[5:].strip())
             nbr_line += 1
 
         elif (line.startswith("BONUS=") and nbr_line == 7):
@@ -110,8 +114,8 @@ def parse_config() -> mapData:
         raise ValueError("Width and height must be positive")
 
     # CHANGE: Set maximum allowed dimensions to 50
-    if width > 75 or height > 75:
-        raise ValueError("Maximum size of map is 50")
+    if width > 100 or height > 100:
+        raise ValueError("Maximum size of map is 100")
 
     # CHANGE: Validate that ENTRY is inside map bounds
     if not (0 <= entry[0] < height and 0 <= entry[1] < width):
