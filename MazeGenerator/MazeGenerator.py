@@ -94,13 +94,13 @@ class MazeGenerator:
 
         return fixed_42_cells
 
-    def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
+    def _validate_point(self) -> None:
        for name, cell in [("ENTRY", self.start_point), ("EXIT", self.end_point)]:
            r, c = cell
            x, y = self._convert_rc_to_xy(r, c)
            if not (0 <= r < self.height and 0 <= c < self.width):
                raise ValueError(f"{name}: ({x}, {y}) is out of bounds.")
-           if cell in fixed_cells:
+           if cell in self.fixed_cells:
                raise ValueError(f"{name}: ({x}, {y}) collides with '42' pattern.")
 
     def _check_valid_neighbors(self, current: tuple[int, int],

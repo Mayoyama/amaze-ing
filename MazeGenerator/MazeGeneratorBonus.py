@@ -76,13 +76,13 @@ class MazeGeneratorBonus:
                         fixed_42_cells.add((ft_grid_r, ft_grid_c))
         return fixed_42_cells
 
-    def _validate_point(self, fixed_cells: set[tuple[int, int]]) -> None:
+    def _validate_point(self) -> None:
        for name, cell in [("ENTRY", self.start_point), ("EXIT", self.end_point)]:
            r, c = cell
            x, y = self._convert_rc_to_xy(r, c)
            if not (0 <= r < self.height and 0 <= c < self.width):
                raise ValueError(f"{name}: ({x}, {y}) is out of bounds.")
-           if cell in fixed_cells:
+           if cell in self.fixed_cells:
                raise ValueError(f"{name}: ({x}, {y}) collides with '42' pattern.")
 
     def check_neighbors(self, row: int, col: int) -> None:
@@ -95,10 +95,8 @@ class MazeGeneratorBonus:
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
-        random.seed(self.seed)
-        # fixed_cells = self._embed_42_pattern()
-
-        self._validate_point(self.fixed_cells)
+        random.seed(self.seed)  # seed already set, is this needed?
+        self._validate_point()
         
         if self._can_fit_42():
             ft_start_col = 0
