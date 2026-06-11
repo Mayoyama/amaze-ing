@@ -137,6 +137,7 @@ class App:
         self._path_cells, _ = self._solver.generate_final_path()
         self._sprite_index = 0
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
+        print_map(self._mazeGen, self._map_data, self._pathstr)
 
     def _draw_menu(self) -> None:
         menu_x = self._r_config.cell_size

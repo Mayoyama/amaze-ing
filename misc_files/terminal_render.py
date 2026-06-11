@@ -12,7 +12,4 @@ STARTING_CONFIG = {
     "perfect": True
 }
 
-def render_map_terminal(maze: MazeGenerator, config: dict[Any]) -> None:
-    
-
-
+#def render_map_terminal(maze: MazeGenerator, config: dict[Any]) -> None:

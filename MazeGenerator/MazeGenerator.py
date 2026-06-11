@@ -80,6 +80,14 @@ class MazeGenerator:
                     else:
                         if self.pattern_42[r][c] >= 0:
                             fixed_42_cells.add((ft_grid_r, ft_grid_c))
+                            if ft_grid_r == 0:
+                                fixed_42_cells.add((ft_grid_r - 1, ft_grid_c))
+                            if ft_grid_r == 4:
+                                fixed_42_cells.add((ft_grid_r + 1, ft_grid_c))
+                            if ft_grid_c == 0:
+                                fixed_42_cells.add((ft_grid_r, ft_grid_c - 1))
+                            if ft_grid_c == 6:
+                                fixed_42_cells.add((ft_grid_r, ft_grid_c + 1))
         return fixed_42_cells
 
     def _validate_point(self) -> None:
@@ -133,16 +141,19 @@ class MazeGenerator:
             self.grid[next_r][next_c] &= ~8
     
     def check_neighbors(self, row: int, col: int) -> None:
-        if col > 0:
-            if self.grid[row][col-1] & 2 == 0:
-                self.grid[row][col] &= ~8
-            if self.grid[row][col+1] & 1 == 0:
-                self.grid[row][col] &= ~2
-        if row > 0:
-            if self.grid[row-1][col] & 4 == 0:
-                self.grid[row][col] &= ~1
-            if self.grid[row+1][col] & 3 == 0:
-                self.grid[row][col] &= ~4
+        if (row, col) not in self.fixed_cells:
+            if col >= 0:
+                if self.grid[row][col-1] & 2 == 0:
+                    self.grid[row][col] &= ~8
+            if col + 1 < self.width:
+                if self.grid[row][col+1] & 8 == 0:
+                    self.grid[row][col] &= ~2
+            if row >= 0:
+                if self.grid[row-1][col] & 4 == 0:
+                    self.grid[row][col] &= ~1
+            if row + 1 < self.height:
+                if self.grid[row+1][col] & 1 == 0:
+                    self.grid[row][col] &= ~4
 
     def _final_map_adjustment(self) -> None:
         if self.height < 3 or self.width < 3:
