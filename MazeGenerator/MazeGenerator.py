@@ -186,7 +186,7 @@ class MazeGenerator:
             self.grid[r][c] = 15
         
         if not self.perfect_map:
-            self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern(1)
+            self.fixed_cells = self._embed_42_pattern(1)
             nbr_break = random.randint(5, 15)
             for _ in range(nbr_break):
                 random_row = random.randint(1, self.height - 2)
