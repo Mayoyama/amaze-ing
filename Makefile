@@ -1,28 +1,61 @@
-.PHONY: install, run, debug, clean, lint, lint-strict
+VENV = maze_venv
+VENV_BIN = $(VENV)/bin
+PYTHON = $(VENV_BIN)/python3
+PIP = $(VENV_BIN)/pip
+CONFIG_TOML = pyproject.toml
+MLX_WHL = mlx-2.2-py3-none-any.whl
+VENV_ANCHOR = $(VENV)/.anchor
 
-install:
-	python3 -m venv maze_venv
-	./maze_venv/bin/pip install --upgrade pip
-	./maze_venv/bin/pip install mypy
-	./maze_venv/bin/pip install mlx-2.2-py3-none-any.whl
-	#  pip install ./MazeGenerator-1.0.0-py3-none-any.whl
-	#  pip install mlx-2.2-py3-none-any.whl
+.PHONY: install run debug clean lint lint-strict build uninstall
 
-run:
-	python3 a_maze_ing.py
-	# ./maze_venv/bin/python3 main.py
+install: $(VENV_ANCHOR)
 
-debug:
-	python3 -m pdb a_maze_ing.py
+$(VENV_ANCHOR): $(CONFIG_TOML)
+	@echo "Creating virtual environment..."
+	python3 -m venv $(VENV)
+	@echo "Installing dependencies directly from TOML..."
+	$(PIP) install --upgrade pip
+	$(PIP) install .[dev]
+	@if [ ! -f "$(MLX_WHL)" ]; then \
+	echo "Missing $(MLX_WHL)"; \
+	exit 1; \
+	fi
+	@echo "Installing MLX..."
+	$(PIP) install $(MLX_WHL)
+	@touch $(VENV_ANCHOR)
+
+run: $(VENV_ANCHOR)
+	$(PYTHON) a_maze_ing.py
+
+debug: $(VENV_ANCHOR)
+	$(PYTHON) -m pdb a_maze_ing.py
 
 clean:
-	rm -rf __pycache__ .mypy_cache
-	
+	find . -type d \( -name "__pycache__" -o -name ".mypy_cache" \) -exec rm -rf {} +
+	find . -type f \( -name "*.pyc" -o -name "*.pyo" -o -name "*~" \) -delete
+	rm -rf build dist *.egg-info
+
 lint:
-	flake8 . 
-	./maze_venv/bin/mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	flake8 . --exclude=maze_venv/,misc_files/ || true
+	$(PYTHON) -m mypy \
+		--warn-return-any \
+		--warn-unused-ignores \
+		--ignore-missing-imports \
+		--disallow-untyped-defs \
+		--check-untyped-defs \
+		--exclude 'maze_venv|misc_files' .
 
 lint-strict:
-	flake8 . 
-	./maze_venv/bin/mypy . --strict
+	flake8 . --exclude=maze_venv/,misc_files/ || true
+	$(PYTHON) -m mypy . --strict --exclude 'maze_venv|misc_files'
 
+build: $(VENV_ANCHOR)
+	$(PYTHON) -m build
+
+uninstall: clean
+	@if python3 -c "import sys; print(sys.prefix != sys.base_prefix)" | grep -q True; then \
+		echo "ERROR: maze_venv is currently active. Unable to remove maze_venv. Run 'deactivate' first."; \
+		else \
+			rm -rf maze_venv; \
+			echo "VENV: maze_venv successfully removed"; \
+	fi

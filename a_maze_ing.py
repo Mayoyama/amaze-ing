@@ -8,6 +8,7 @@ from mlx_render import Renderer, UI_state
 from mazeSolver import MazeSolver
 from map_data import parse_config
 from utils import print_map
+from typing import cast, Any
 
 
 @dataclass(frozen=True)
@@ -56,30 +57,32 @@ class App:
         self._ui = UI_state()
         self._mlx = Mlx()
         self._mlx_ptr = self._mlx.mlx_init()
-        
+
         if self._map_data.bonus:
             self._grid = self._mazeGenBonus.gen_map()
             self._fixed_cells = self._mazeGenBonus.fixed_cells
             """
             DEBUGGING
             """
-            #self._mazeGenBonus.debug_unreachable_cells()
+            # self._mazeGenBonus.debug_unreachable_cells()
         else:
             self._grid = self._mazeGen.gen_map()
             self._fixed_cells = self._mazeGen.fixed_cells
         self._solver = MazeSolver(self._grid, self._map_data)
         self._path_cells, self._pathstr = self._solver.generate_final_path()
-        
-        self._win_width = max(self._r_config.min_win_width, (len(self._grid[0]) + 2) *
-                self._r_config.cell_size)
-        self._win_height = (len(self._grid) + 1) * self._r_config.cell_size + 160
+
+        self._win_width = max(self._r_config.min_win_width,
+                              (len(self._grid[0]) + 2) *
+                              self._r_config.cell_size)
+        self._win_height = (len(self._grid)
+                            + 1) * self._r_config.cell_size + 160
         self._img_width = self._win_width
         self._img_height = self._win_height
 
         if not os.path.exists(self._r_config.sprite_path):
             raise FileNotFoundError(self._r_config.sprite_path)
         self._animation_tick = 0
-        self._sprite_index = 0 
+        self._sprite_index = 0
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
 
         sprite_res = self._mlx.mlx_png_file_to_image(
@@ -123,7 +126,7 @@ class App:
             self._ui
         )
 
-        self._renderer.set_sprite(
+        cast(Any, self._renderer.set_sprite)(
             self._sprite_data,
             self._sprite_size_line,
             self._sprite_width,
@@ -143,14 +146,15 @@ class App:
             self._grid = self._mazeGen.gen_map()
             self._renderer._fixed_cells = self._mazeGen.fixed_cells
         self._renderer._grid = self._grid
-        
-        # self._renderer._fixed_cells = self._mazeGen.fixed_cells
-        
         self._solver = MazeSolver(self._grid, self._map_data)
-        self._path_cells, _ = self._solver.generate_final_path()
+        self._path_cells, self._pathstr = self._solver.generate_final_path()
         self._sprite_index = 0
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
         self._ui.show_sprite = False
+        if self._map_data.bonus:
+            print_map(self._mazeGenBonus, self._map_data, self._pathstr)
+        else:
+            print_map(self._mazeGen, self._map_data, self._pathstr)
 
     def _draw_menu(self) -> None:
         menu_x = self._r_config.cell_size
@@ -174,7 +178,7 @@ class App:
         self._renderer.clear_map()
         self._renderer.render_grid(self._path_cells)
         if self._ui.show_sprite:
-            self._renderer.draw_sprite(self._sprite_pos)
+            cast(Any, self._renderer.draw_sprite)(self._sprite_pos)
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._win,
             self._img, 0, 0)
@@ -189,7 +193,7 @@ class App:
         return choice(list(new_color))
 
     def _setup_keycode_hooks(self) -> None:
-        def key_handler(keycode, param):
+        def key_handler(keycode: int, param: Any) -> None:
             if keycode == 49:
                 self._ui.wall_color = self._next_color()
             elif keycode == 50:
@@ -224,14 +228,14 @@ class App:
                 self._map_data.perfect = True
                 self._map_data.seed += 1
                 self._regenerate_map()
-                 # implement perfect bonus maze
+                # implement perfect bonus maze
             elif keycode == 56:
                 self._ui.animate_sprite = False
                 self._map_data.bonus = True
                 self._map_data.perfect = False
                 self._map_data.seed += 1
                 self._regenerate_map()
-                 # implement non perfect bonus maze
+                # implement non perfect bonus maze
             elif keycode == 65307:
                 self._mlx.mlx_loop_exit(self._mlx_ptr)
             self._redraw_map()
@@ -239,7 +243,7 @@ class App:
 
     def _setup_loop_hook(self) -> None:
 
-        def update_img(param):
+        def update_img(param: Any) -> None:
             if not self._ui.animate_sprite:
                 return
 
@@ -262,10 +266,10 @@ class App:
         self._renderer.clear_map()
         self._renderer.render_grid(self._path_cells)
 
-        # if self._map_data.bonus: 
-        #     print_map(self._mazeGenBonus, self._map_data, self._pathstr)
-        # else:
-        #     print_map(self._mazeGen, self._map_data, self._pathstr)
+        if self._map_data.bonus:
+            print_map(self._mazeGenBonus, self._map_data, self._pathstr)
+        else:
+            print_map(self._mazeGen, self._map_data, self._pathstr)
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._win,
             self._img, 0, 0)

@@ -1,6 +1,4 @@
 from dataclasses import dataclass
-from random import randint
-from typing import Any
 
 
 @dataclass
@@ -31,19 +29,21 @@ def parse_config() -> mapData:
     except (FileNotFoundError, PermissionError, IsADirectoryError) as e:
         raise OSError("Cannot access config file") from e
 
+    entry: tuple[int, int] = (0, 0)
+    exit: tuple[int, int] = (0, 0)
     nbr_line = 0
     for line in lines:
         if line.strip() == '' or line.startswith("#"):
             continue
-        
+
         if (line.startswith("WIDTH=") and nbr_line == 0):
             width: int = found_value("WIDTH", line[6:].strip())
             nbr_line += 1
-        
+
         elif (line.startswith("HEIGHT=") and nbr_line == 1):
             height: int = found_value("HEIGHT", line[7:].strip())
             nbr_line += 1
-        
+
         elif line.startswith("ENTRY=") and nbr_line == 2:
             entry_parts = line[6:].split(',')
             if len(entry_parts) != 2:
@@ -53,9 +53,9 @@ def parse_config() -> mapData:
             entry_y: int = found_value("ENTRY (x,y)", entry_parts[1].strip())
             if entry_x <= 0 or entry_y <= 0:
                 raise ValueError("ENTRY: co-ordinate values must be >= 1")
-            
+
             # internal format: (row, col) = (y, x), top-left as (0, 0)
-            entry: tuple[int, int] = (entry_y -1, entry_x -1)
+            entry = (entry_y - 1, entry_x - 1)
             nbr_line += 1
 
         elif line.startswith("EXIT=") and nbr_line == 3:
@@ -67,9 +67,9 @@ def parse_config() -> mapData:
             exit_y: int = found_value("EXIT (x,y)", exit_parts[1].strip())
             if exit_x <= 0 or exit_y <= 0:
                 raise ValueError("EXIT: co-ordinate values must be >= 1")
-            
+
             # internal format: (row, col) = (y, x), top-left as (0, 0)
-            exit: tuple[int, int] = (exit_y - 1, exit_x - 1)
+            exit = (exit_y - 1, exit_x - 1)
             nbr_line += 1
 
         elif (line.startswith("OUTPUT_FILE=") and nbr_line == 4):
@@ -92,7 +92,7 @@ def parse_config() -> mapData:
             DEBUGGING
             """
 
-            seed: int = randint(1, 100)    # found_value("SEED", line[5:].strip())
+            seed: int = found_value("SEED", line[5:].strip())  # randint(1,100)
             nbr_line += 1
 
         elif (line.startswith("BONUS=") and nbr_line == 7):
@@ -109,24 +109,25 @@ def parse_config() -> mapData:
         raise ValueError("Invalid, empty, or out-of-order configuration "
                          "field(s)")
 
-    # CHANGE: Ensure dimensions are positive
+    # Ensure dimensions are positive
     if width <= 0 or height <= 0:
         raise ValueError("Width and height must be positive")
 
-    # CHANGE: Set maximum allowed dimensions to 50
+    # Set maximum allowed dimensions to 50
     if width > 100 or height > 100:
         raise ValueError("Maximum size of map is 100")
 
-    # CHANGE: Validate that ENTRY is inside map bounds
+    # Validate that ENTRY is inside map bounds
     if not (0 <= entry[0] < height and 0 <= entry[1] < width):
         raise ValueError("ENTRY is outside map bounds")
 
-    # CHANGE: Validate that EXIT is inside map bounds
+    # Validate that EXIT is inside map bounds
     if not (0 <= exit[0] < height and 0 <= exit[1] < width):
         raise ValueError("EXIT is outside map bounds")
 
-    #CHANGE: Validate that EXIT and ENTRY is in different point
+    # Validate that EXIT and ENTRY is in different point
     if (exit == entry):
-        raise ValueError("EXIT and ENTER should be in the different point!")
+        raise ValueError("EXIT and ENTER should be different points")
 
-    return mapData(width, height, entry, exit, output_file, perfect, seed, bonus)
+    return mapData(width, height, entry, exit, output_file,
+                   perfect, seed, bonus)

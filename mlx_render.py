@@ -1,5 +1,6 @@
 from map_data import mapData
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -8,8 +9,8 @@ class UI_state:
     Stores mutable UI settings including colors and display toggles
     used by the renderer.
     """
-    wall_color: tuple[int, int, int] = (0, 255, 0)
-    logo42_color: tuple[int, int, int] = (0, 0, 0)# (255, 255, 255)
+    wall_color: tuple[int, int, int] = (150, 255, 0)
+    logo42_color: tuple[int, int, int] = (0, 0, 0)  # (255, 255, 255)
     path_color: tuple[int, int, int] = (56, 175, 205)
     show_path: bool = False
     animate_sprite: bool = False
@@ -35,7 +36,10 @@ class Renderer:
         _ui: Shared UI state containing colors and display options.
     """
 
-    def __init__(self, grid: list[list[int]], map_data: mapData, fixed_cells: set[tuple[int, int]], data: memoryview, img_w: int, img_h: int, size_line: int, cell_size: int, ui: UI_state) -> None:
+    def __init__(self, grid: list[list[int]], map_data: mapData,
+                 fixed_cells: set[tuple[int, int]], data: memoryview,
+                 img_w: int, img_h: int, size_line: int, cell_size: int,
+                 ui: UI_state) -> None:
         self._grid = grid
         self._fixed_cells = fixed_cells
         self._ui = ui
@@ -82,14 +86,15 @@ class Renderer:
             for x in range(self._image_width):
                 self._put_pixel(x, y, (0, 0, 0))
 
-    def set_sprite(self, sprite_data, sprite_size_line, sprite_width, sprite_height):
+    def set_sprite(self, sprite_data: Any, sprite_size_line: int,
+                   sprite_width: int, sprite_height: int) -> None:
         """Store sprite image data for later rendering."""
         self._sprite_data = sprite_data
         self._sprite_size_line = sprite_size_line
         self._sprite_width = sprite_width
         self._sprite_height = sprite_height
 
-    def draw_sprite(self, sprite_pos):
+    def draw_sprite(self, sprite_pos: tuple[int, int]) -> None:
         """Draw the sprite PNG at the specified maze cell."""
         if not self._sprite_data or not sprite_pos:
             return
@@ -115,7 +120,9 @@ class Renderer:
                 dest_x = sprite_x + x
                 dest_y = sprite_y + y
 
-                if 0 <= dest_x < self._image_width and 0 <= dest_y < self._image_height:
+                if (
+                 0 <= dest_x < self._image_width
+                 and 0 <= dest_y < self._image_height):
                     offset = (dest_y * self._size_line) + (dest_x * 4)
 
                     self._data[offset + 0] = b
@@ -142,7 +149,10 @@ class Renderer:
             self._put_pixel(x, y + i, self._ui.wall_color)
 
     def draw_path(self, path_cells: list[tuple[int, int]]) -> None:
-        """Renders the path between ENTRY and EXIT by filling in each cell in the path"""
+        """
+        Renders the path between ENTRY and EXIT by filling in
+        each cell in the path
+        """
         if not path_cells:
             return
 
@@ -156,7 +166,10 @@ class Renderer:
                     self._put_pixel(x + dx, y + dy, color)
 
     def _fill_cell(self, r: int, c: int, color: tuple[int, int, int]) -> None:
-        """Loops to fill in every pixel within a cell. Requires RGB to be passed in"""
+        """
+        Loops to fill in every pixel within a cell. Requires RGB to
+        be passed in
+        """
         x, y = self._cell_to_pixel(r, c)
         for r_offset in range(1, self._cell_size - 1):
             for c_offset in range(1, self._cell_size - 1):

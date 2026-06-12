@@ -6,7 +6,6 @@ matrix of walls into an open, perfect maze layout.
 """
 
 import random
-from dataclasses import dataclass
 from map_data import mapData
 
 
@@ -44,7 +43,7 @@ class MazeGenerator:
 
     @staticmethod
     def _convert_rc_to_xy(r: int, c: int) -> tuple[int, int]:
-            return (c + 1, r + 1)
+        return (c + 1, r + 1)
 
     def _initialize_empty_grid(self) -> list[list[int]]:
         """creates and initializes the grid to be used in map generation."""
@@ -79,13 +78,15 @@ class MazeGenerator:
         return fixed_42_cells
 
     def _validate_point(self) -> None:
-       for name, cell in [("ENTRY", self.start_point), ("EXIT", self.end_point)]:
-           r, c = cell
-           x, y = self._convert_rc_to_xy(r, c)
-           if not (0 <= r < self.height and 0 <= c < self.width):
-               raise ValueError(f"{name}: ({x}, {y}) is out of bounds.")
-           if cell in self.fixed_cells:
-               raise ValueError(f"{name}: ({x}, {y}) collides with '42' pattern.")
+        for name, cell in [("ENTRY", self.start_point),
+                           ("EXIT", self.end_point)]:
+            r, c = cell
+            x, y = self._convert_rc_to_xy(r, c)
+            if not (0 <= r < self.height and 0 <= c < self.width):
+                raise ValueError(f"{name}: ({x}, {y}) is out of bounds.")
+            if cell in self.fixed_cells:
+                raise ValueError(f"{name}: ({x}, {y}) collides with "
+                                 "'42' pattern.")
 
     def _check_valid_neighbors(self, current: tuple[int, int],
                                visited: set[tuple[int,
@@ -169,7 +170,7 @@ class MazeGenerator:
             if c < self.width - 1:
                 self.grid[r][c + 1] |= 8
             self.grid[r][c] = 15
-        
+
         if not self.perfect_map:
             protected_cells: set[tuple[int, int]] = set()
 
@@ -221,7 +222,7 @@ class MazeGenerator:
             start_cell = (self.height - 1, 0)
 
         stack: list[tuple[int, int]] = [start_cell]
-        visited: set[tuple[int, int]] = {start_cell} | self.fixed_cells  # fixed_cells  Needed? Need to test!!
+        visited: set[tuple[int, int]] = {start_cell} | self.fixed_cells
 
         while stack:
             current = stack[-1]

@@ -1,7 +1,11 @@
 from MazeGenerator.MazeGenerator import MazeGenerator
+from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
 from map_data import mapData
+import os
 
-def print_map(maze: MazeGenerator, map_data: mapData, path: str) -> None:
+
+def print_map(maze: MazeGenerator | MazeGeneratorBonus,
+              map_data: mapData, path: str) -> None:
     """Display a map and key point on output file"""
     try:
         with open(map_data.output_file, "w") as file:
