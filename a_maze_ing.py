@@ -60,7 +60,7 @@ class App:
 
         if self._map_data.bonus:
             self._grid = self._mazeGenBonus.gen_map()
-            self._fixed_cells = self._mazeGenBonus.fixed_cells
+            self._fixed_cells = self._mazeGenBonus.full_42_celles
             """
             DEBUGGING
             """
@@ -141,7 +141,7 @@ class App:
         self._mazeGenBonus = MazeGeneratorBonus(self._map_data)
         if self._map_data.bonus:
             self._grid = self._mazeGenBonus.gen_map()
-            self._renderer._fixed_cells = self._mazeGenBonus.fixed_cells
+            self._renderer._fixed_cells = self._mazeGenBonus.full_42_celles
         else:
             self._grid = self._mazeGen.gen_map()
             self._renderer._fixed_cells = self._mazeGen.fixed_cells

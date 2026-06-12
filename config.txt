@@ -4,5 +4,5 @@ ENTRY=1,10
 EXIT=19, 14
 OUTPUT_FILE=output_maze.txt
 PERFECT=True
-SEED=42
-BONUS=True
+SEED=1
+BONUS=False

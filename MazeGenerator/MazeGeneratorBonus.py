@@ -41,7 +41,8 @@ class MazeGeneratorBonus:
         self.start_point = data.entry
         self.end_point = data.exit
         self.perfect_map = data.perfect
-        self.fixed_cells = self._embed_42_pattern()
+        self.fixed_cells = self._embed_42_pattern("all")
+        self.full_42_celles = self._embed_42_pattern("full")
 
 
     def _initialize_empty_grid(self) -> list[list[int]]:
@@ -61,7 +62,7 @@ class MazeGeneratorBonus:
             return False
         return True
 
-    def _embed_42_pattern(self) -> set[tuple[int, int]]:
+    def _embed_42_pattern(self, type: str) -> set[tuple[int, int]]:
         """Returns set[tuple[int, int]] to embed '4 2' correctly on the map"""
         fixed_42_cells: set[tuple[int, int]] = set()
 
@@ -69,11 +70,14 @@ class MazeGeneratorBonus:
             ft_start_row = 0
             ft_start_col = 0
             for r in range(5):
-                for c in range(7):
-                    ft_grid_r = ft_start_row + r
-                    ft_grid_c = ft_start_col + c
+                    for c in range(7):
+                        if type == "all":
+                            if self.pattern_42[r][c] >= 0:
+                                fixed_42_cells.add((ft_start_row + r, ft_start_col + c))
+                        elif type == "full":
+                            if self.pattern_42[r][c] == 0:
+                                fixed_42_cells.add((ft_start_row + r, ft_start_col + c))
 
-                    fixed_42_cells.add((ft_grid_r, ft_grid_c))
         return fixed_42_cells
 
     def _validate_point(self) -> None:
