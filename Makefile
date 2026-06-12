@@ -24,10 +24,10 @@ $(VENV_ANCHOR): $(CONFIG_TOML)
 	$(PIP) install $(MLX_WHL)
 	@touch $(VENV_ANCHOR)
 
-run: $(VENV_ANCHOR)
-	$(PYTHON) a_maze_ing.py
+run:
+	$(PYTHON) a_maze_ing.py config.txt
 
-debug: $(VENV_ANCHOR)
+debug:
 	$(PYTHON) -m pdb a_maze_ing.py
 
 clean:
@@ -49,7 +49,7 @@ lint-strict:
 	flake8 . --exclude=maze_venv/,misc_files/ || true
 	$(PYTHON) -m mypy . --strict --exclude 'maze_venv|misc_files'
 
-build: $(VENV_ANCHOR)
+build:
 	$(PYTHON) -m build
 
 uninstall: clean

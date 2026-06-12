@@ -107,6 +107,45 @@ class MazeGeneratorBonus:
                 if self.grid[row+1][col] & 1 == 0:
                     self.grid[row][col] &= ~4
 
+    def _remove_excessive_rooms(self) -> None:
+        """Scans in a 3x3 window and adds a wall if a blank 3x3 space is found."""
+        def _is_open_horizontal(r: int, c: int) -> bool:
+            """Check whether the wall between (r,c) and (r,c+1) is open."""
+            return (self.grid[r][c] & 2 == 0 and
+                    self.grid[r][c + 1] & 8 == 0)
+        
+        def _is_open_vertical(r: int, c: int) -> bool:
+            """Check whether the wall between (r,c) and (r+1,c) is open."""
+            return (self.grid[r][c] & 4 == 0 and
+                    self.grid[r + 1][c] & 1 == 0)
+
+        for scan_r in range(self.height - 2):
+            for scan_c in range(self.width - 2):
+                is_open_room = True
+                # Check all horizontal boundaries in the window
+                for window_r in range(scan_r, scan_r + 3):
+                    for window_c in range(scan_c, scan_c + 2):
+                        if not _is_open_horizontal(window_r, window_c):
+                            is_open_room = False
+                            break
+                    if not is_open_room:
+                        break
+
+                if is_open_room:
+                    # Check all vertical boundaries in the window
+                    for window_r in range(scan_r, scan_r + 2):
+                        for window_c in range(scan_c, scan_c + 3):
+                            if not _is_open_vertical(window_r, window_c):
+                                is_open_room = False
+                                break
+                        if not is_open_room:
+                            break
+
+                # Add a wall through the center of the room
+                if is_open_room:
+                    self.grid[scan_r + 1][scan_c + 1] |= 1
+                    self.grid[scan_r][scan_c + 1] |= 4
+
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
         random.seed(self.seed)
@@ -134,7 +173,7 @@ class MazeGeneratorBonus:
                 self.check_neighbors(row, col)
 
         if not self.perfect_map:
-            nbr_break = random.randint(5, 15)
+            nbr_break = random.randint(5, 20)
             for _ in range(nbr_break):
                 random_row = random.randint(1, self.height - 2)
                 random_col = random.randint(1, self.width - 2)
@@ -144,5 +183,62 @@ class MazeGeneratorBonus:
             for row in range(self.height):
                 for col in range(self.width):
                     self.check_neighbors(row, col)
-                
+
+        self._remove_excessive_rooms()
+
         return self.grid
+"""
+    # DEBUGGING
+    def debug_unreachable_cells(self) -> None:
+        '''
+        DEBUG ONLY:
+        Prints all cells that are NOT reachable from ENTRY.
+        Does not modify the maze.
+        '''
+
+        height = self.height
+        width = self.width
+        start = self.start_point
+
+        def can_move(r1, c1, r2, c2):
+            dr, dc = r2 - r1, c2 - c1
+
+            if dr == -1:
+                return (self.grid[r1][c1] & 1) == 0
+            if dr == 1:
+                return (self.grid[r1][c1] & 4) == 0
+            if dc == -1:
+                return (self.grid[r1][c1] & 8) == 0
+            if dc == 1:
+                return (self.grid[r1][c1] & 2) == 0
+            return False
+
+        visited = set([start])
+        queue = deque([start])
+
+        # BFS from ENTRY
+        while queue:
+            r, c = queue.popleft()
+
+            for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+                nr, nc = r + dr, c + dc
+
+                if 0 <= nr < height and 0 <= nc < width:
+                    if (nr, nc) not in visited:
+                        if can_move(r, c, nr, nc):
+                            visited.add((nr, nc))
+                            queue.append((nr, nc))
+
+        # collect unreachable cells
+        unreachable = [
+            (r, c)
+            for r in range(height)
+            for c in range(width)
+            if (r, c) not in visited
+            and (r, c) not in self.fixed_cells
+        ]
+
+        print("UNREACHABLE CELLS FROM ENTRY:")
+        print(unreachable)
+        print(f"Total: {len(unreachable)}")
+"""

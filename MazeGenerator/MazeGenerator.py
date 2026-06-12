@@ -141,36 +141,50 @@ class MazeGenerator:
                 if self.grid[row+1][col] & 1 == 0:
                     self.grid[row][col] &= ~4
 
-    def _final_map_adjustment(self) -> None:
-        if self.height < 3 or self.width < 3:
-            return
+    def _remove_excessive_rooms(self) -> None:
+        """Scans in a 3x3 window and adds a wall if a blank 3x3 space is found."""
+        def _is_open_horizontal(r: int, c: int) -> bool:
+            """Check whether the wall between (r,c) and (r,c+1) is open."""
+            return (self.grid[r][c] & 2 == 0 and
+                    self.grid[r][c + 1] & 8 == 0)
+        
+        def _is_open_vertical(r: int, c: int) -> bool:
+            """Check whether the wall between (r,c) and (r+1,c) is open."""
+            return (self.grid[r][c] & 4 == 0 and
+                    self.grid[r + 1][c] & 1 == 0)
 
         for scan_r in range(self.height - 2):
             for scan_c in range(self.width - 2):
                 is_open_room = True
+                # Check all horizontal boundaries in the window
                 for window_r in range(scan_r, scan_r + 3):
-                    for window_c in range(scan_c, scan_c + 3):
-                        if self.grid[window_r][window_c] != 0:
+                    for window_c in range(scan_c, scan_c + 2):
+                        if not _is_open_horizontal(window_r, window_c):
                             is_open_room = False
                             break
                     if not is_open_room:
                         break
 
-                if is_open_room is True:
+                if is_open_room:
+                    # Check all vertical boundaries in the window
+                    for window_r in range(scan_r, scan_r + 2):
+                        for window_c in range(scan_c, scan_c + 3):
+                            if not _is_open_vertical(window_r, window_c):
+                                is_open_room = False
+                                break
+                        if not is_open_room:
+                            break
+
+                # Add a wall through the center of the room
+                if is_open_room:
                     self.grid[scan_r + 1][scan_c + 1] |= 1
                     self.grid[scan_r][scan_c + 1] |= 4
 
-        for r, c in self.fixed_cells:
-            if r > 0:
-                self.grid[r - 1][c] |= 4
-            if r < self.height - 1:
-                self.grid[r + 1][c] |= 1
-            if c > 0:
-                self.grid[r][c - 1] |= 2
-            if c < self.width - 1:
-                self.grid[r][c + 1] |= 8
-            self.grid[r][c] = 15
+    def _final_map_adjustment(self) -> None:
+        if self.height < 3 or self.width < 3:
+            return
 
+        # If perfect=False, removes random walls to break perfection
         if not self.perfect_map:
             protected_cells: set[tuple[int, int]] = set()
 
@@ -197,7 +211,7 @@ class MazeGenerator:
                         if ft_grid_c == logo_42_start_col + 6:
                             protected_cells.add((ft_grid_r, ft_grid_c + 1))
 
-            nbr_break = random.randint(5, 15)
+            nbr_break = random.randint(5, 20)
             for _ in range(nbr_break):
                 random_row = random.randint(1, self.height - 2)
                 random_col = random.randint(1, self.width - 2)
@@ -208,18 +222,45 @@ class MazeGenerator:
                 for col in range(self.width):
                     self.check_neighbors(row, col)
 
+        ## Scans in a 3x3 window and adds a wall if a blank 3x3 space is found
+        #for scan_r in range(self.height - 2):
+        #    for scan_c in range(self.width - 2):
+        #        is_open_room = True
+        #        for window_r in range(scan_r, scan_r + 3):
+        #            for window_c in range(scan_c, scan_c + 3):
+        #                if self.grid[window_r][window_c] != 0:
+        #                    is_open_room = False
+        #                    break
+        #            if not is_open_room:
+        #                break
+
+        #        if is_open_room is True:
+        #            self.grid[scan_r + 1][scan_c + 1] |= 1
+        #            self.grid[scan_r][scan_c + 1] |= 4
+        
+        self._remove_excessive_rooms()
+
+        # Final check to ensure wall are not broken around the '42' logo
+        for r, c in self.fixed_cells:
+            if r > 0:
+                self.grid[r - 1][c] |= 4
+            if r < self.height - 1:
+                self.grid[r + 1][c] |= 1
+            if c > 0:
+                self.grid[r][c - 1] |= 2
+            if c < self.width - 1:
+                self.grid[r][c + 1] |= 8
+            self.grid[r][c] = 15
+
+
+
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout, embedding the 42 pattern first."""
         random.seed(self.seed)
 
         self._validate_point()
 
-        if self._can_fit_42():
-            logo_42_start_row = (self.height - 5) // 2
-            logo_42_start_col = (self.width - 7) // 2
-            start_cell = (logo_42_start_row + 2, logo_42_start_col + 1)
-        else:
-            start_cell = (self.height - 1, 0)
+        start_cell = (self.height - 1, 0)
 
         stack: list[tuple[int, int]] = [start_cell]
         visited: set[tuple[int, int]] = {start_cell} | self.fixed_cells
