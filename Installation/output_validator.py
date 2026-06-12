@@ -4,7 +4,6 @@
 # Usage: python3 output_validator.py output_maze.txt
 
 import sys
-from mlx import Mlx
 
 if len(sys.argv) != 2:
     print(f"Usage: python3 {sys.argv[0]} <output_file>")

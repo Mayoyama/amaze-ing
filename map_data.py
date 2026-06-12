@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import sys
 
+
 @dataclass
 class mapData:
     width: int
@@ -12,6 +13,7 @@ class mapData:
     seed: int
     bonus: bool
 
+
 def parse_config() -> mapData:
     def found_value(param: str, value: str) -> int:
         if (value.isnumeric()):
@@ -20,10 +22,11 @@ def parse_config() -> mapData:
             if len(value) == 0:
                 value = "Empty value"
             raise ValueError(f"{param}: {value} is not valid")
-            
+
     def inputfile() -> str:
         if len(sys.argv) != 2:
-            print("You should give one argument to the program. Example: python3 a_maze_int.py <file.name>", file=sys.stderr)
+            print("You should give one argument to the program. Example: "
+                  "python3 a_maze_int.py <file.name>", file=sys.stderr)
             sys.exit(1)
         return sys.argv[1]
 

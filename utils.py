@@ -1,7 +1,6 @@
 from MazeGenerator.MazeGenerator import MazeGenerator
 from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
 from map_data import mapData
-import os
 
 
 def print_map(maze: MazeGenerator | MazeGeneratorBonus,

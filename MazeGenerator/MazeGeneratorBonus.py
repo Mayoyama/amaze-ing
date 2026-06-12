@@ -2,17 +2,20 @@
 
 This module provides the core engine for generating 2D grid mazes. It
 encapsulates the algorithmic logic required to transition a solid
-matrix of walls into an open maze layout using a modified variation of the Sidewinder algorithm..
+matrix of walls into an open maze layout using a modified variation of the
+Sidewinder algorithm.
 """
 
 import random
-from dataclasses import dataclass
+from map_data import mapData
 from MazeGenerator.MazeGen import MazeGenBase
+
 
 class MazeGeneratorBonus(MazeGenBase):
     """A child class of MazeGenBase to generate the bonus maze.
 
-    It uses a different pattern_42 to create a "42" shape layout (where 0 represents a full wall).
+    It uses a different pattern_42 to create a "42" shape layout
+    (where 0 represents a full wall).
     """
 
     pattern_42 = [
@@ -23,7 +26,7 @@ class MazeGeneratorBonus(MazeGenBase):
         [1, 5, 0, 5, 0, 0, 0],       # Row 4: . . █ . █ █ █
     ]
 
-    def __init__(self, data: dataclass) -> None:
+    def __init__(self, data: mapData) -> None:
         """Initializes the maze configuration."""
         super().__init__(data, pattern_42=self.pattern_42)
         self.full_42_celles = self._embed_42_pattern("full")
@@ -40,7 +43,7 @@ class MazeGeneratorBonus(MazeGenBase):
                 else:
                     is_last_row = (row == self.height - 1)
                     is_last_col = (col == self.width - 1)
-    
+
                     if is_last_row and is_last_col:
                         rnd = 0
                     elif is_last_row:
@@ -48,7 +51,7 @@ class MazeGeneratorBonus(MazeGenBase):
                     elif is_last_col:
                         rnd = 4
                     else:
-                        rnd: int = random.choice([2, 4])
+                        rnd = random.choice([2, 4])
 
                 if rnd != 0:
                     self.grid[row][col] &= ~rnd

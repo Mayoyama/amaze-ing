@@ -1,29 +1,34 @@
 """Maze Generation Base Module.
 
 This module provides the core engine for generating 2D grid mazes. It contains
-a parent class that aggregates core map configuration data and shared methods 
+a parent class that aggregates core map configuration data and shared methods
 utilized across different maze generation algorithms.
 """
 
 import random
-#from dataclasses import dataclass
 from map_data import mapData
+
 
 class MazeGenBase():
     """An algorithmic engine responsible for carving 2D grid mazes.
-    
-        Attributes:
-            width (int): Total column count of the maze grid.
-            height (int): Total row count of the maze grid.
-            seed (int): Numeric seed value used to initialize the pseudo-random
-                number generator, ensuring reproducible maze layouts.
-            grid (list[list[int]]): The internal 2D matrix representing the maze layout.
-            pattern_42 (list[list[int]]): The template for the '42' pattern that must
-                appear in the generated map.
-            start_point (tuple[int, int]): Row and column coordinates for the maze entrance.
-            end_point (tuple[int, int]): Row and column coordinates for the maze exit.
-            perfect_map (bool): True if the maze is a perfect maze (no loops), False otherwise.
-            fixed_cells (set[tuple[int, int]]): Grid coordinates reserved by the '42' pattern.
+
+    Attributes:
+        width (int): Total column count of the maze grid.
+        height (int): Total row count of the maze grid.
+        seed (int): Numeric seed value used to initialize the pseudo-random
+            number generator, ensuring reproducible maze layouts.
+        grid (list[list[int]]): The internal 2D matrix representing
+            the maze layout.
+        pattern_42 (list[list[int]]): The template for the '42' pattern
+            that must appear in the generated map.
+        start_point (tuple[int, int]): Row and column coordinates for
+            the maze entrance.
+        end_point (tuple[int, int]): Row and column coordinates for the
+            maze exit.
+        perfect_map (bool): True if the maze is a perfect maze (no loops),
+            False otherwise.
+        fixed_cells (set[tuple[int, int]]): Grid coordinates reserved by
+            the '42' pattern.
     """
     def __init__(self, data: mapData, pattern_42: list[list[int]]) -> None:
         """Initializes maze config and instantiates a solid wall grid."""
@@ -36,15 +41,18 @@ class MazeGenBase():
         self.perfect_map = data.perfect
         self.pattern_42 = pattern_42
         self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern("all")
-        
 
     @staticmethod
     def _convert_rc_to_xy(r: int, c: int) -> tuple[int, int]:
-        """Converts row and column matrix indices into standard 1-indexed (x, y) coordinates."""
+        """Converts row and column matrix indices into standard 1-indexed
+        (x, y) coordinates.
+        """
         return (c + 1, r + 1)
 
     def _initialize_empty_grid(self) -> list[list[int]]:
-        """Creates and initializes the grid with fully intact walls (value 15) to use in map generation."""
+        """Creates and initializes the grid with fully intact walls (value 15)
+         to use in map generation.
+        """
         grid: list[list[int]] = []
         for r in range(self.height):
             curr_row: list[int] = []
@@ -52,13 +60,15 @@ class MazeGenBase():
                 curr_row.append(15)
             grid.append(curr_row)
         return grid
-        
+
     def _can_fit_42(self) -> bool:
         """Check if maze dimensions are large enough to hold '42' pattern."""
         return self.height >= 6 and self.width >= 8
 
     def _embed_42_pattern(self, type: str) -> set[tuple[int, int]]:
-        """Returns a set of coordinate tuples to reserve the '42' pattern spaces on the grid."""
+        """Returns a set of coordinate tuples to reserve the '42' pattern
+        spaces on the grid.
+        """
         fixed_42_cells: set[tuple[int, int]] = set()
 
         if not self._can_fit_42():
@@ -67,18 +77,22 @@ class MazeGenBase():
         ft_start_row = 0
         ft_start_col = 0
         for r in range(5):
-                for c in range(7):
-                    if type == "all":
-                        if self.pattern_42[r][c] >= 0:
-                            fixed_42_cells.add((ft_start_row + r, ft_start_col + c))
-                    elif type == "full":
-                        if self.pattern_42[r][c] == 0:
-                            fixed_42_cells.add((ft_start_row + r, ft_start_col + c))
+            for c in range(7):
+                if type == "all":
+                    if self.pattern_42[r][c] >= 0:
+                        fixed_42_cells.add((ft_start_row + r,
+                                            ft_start_col + c))
+                elif type == "full":
+                    if self.pattern_42[r][c] == 0:
+                        fixed_42_cells.add((ft_start_row + r,
+                                            ft_start_col + c))
 
         return fixed_42_cells
 
     def _validate_point(self) -> None:
-        """Validates that the Entry and Exit points do not collide with the '42' pattern."""
+        """Validates that the Entry and Exit points do not collide
+        with the '42' pattern.
+        """
         for name, cell in [("ENTRY", self.start_point),
                            ("EXIT", self.end_point)]:
             r, c = cell
@@ -88,10 +102,11 @@ class MazeGenBase():
                                  "'42' pattern.")
 
     def _check_neighbors(self, row: int, col: int) -> None:
-        """Synchronizes wall states by ensuring adjacent cells share matching open paths.
-        
-        If a neighboring cell has removed its wall facing the current cell, this removes the 
-        corresponding wall in the current cell.
+        """Synchronizes wall states by ensuring adjacent cells share
+        matching open paths.
+
+        If a neighboring cell has removed its wall facing the current cell,
+        this removes the corresponding wall in the current cell.
         """
         if (row, col) not in self.fixed_cells:
             if col >= 0:
@@ -108,7 +123,9 @@ class MazeGenBase():
                     self.grid[row][col] &= ~4
 
     def _non_perfect(self) -> None:
-        """Introduces loops into the maze by destroying walls at a random number of locations."""
+        """Introduces loops into the maze by destroying walls at a random
+        number of locations.
+        """
         if not self.perfect_map:
             nbr_break = random.randint(5, 20)
             for _ in range(nbr_break):
@@ -119,7 +136,9 @@ class MazeGenBase():
                     self.grid[random_row][random_col] &= ~rnd
 
     def _remove_excessive_rooms(self) -> None:
-        """Scans in a 3x3 window and adds a wall if a blank 3x3 space is found."""
+        """Scans in a 3x3 window and adds a wall if a blank 3x3 space is
+        found.
+        """
         def _is_open_horizontal(r: int, c: int) -> bool:
             """Check whether the wall between (r,c) and (r,c+1) is open."""
             return (self.grid[r][c] & 2 == 0 and

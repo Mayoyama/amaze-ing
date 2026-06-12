@@ -4,7 +4,7 @@ from mlx import Mlx
 from dataclasses import dataclass
 from MazeGenerator.MazeGenerator import MazeGenerator
 from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
-from mlx_render import Renderer, UI_state
+from renderer.mlx_render import Renderer, UI_state
 from mazeSolver import MazeSolver
 from map_data import parse_config
 from utils import print_map
@@ -61,10 +61,6 @@ class App:
         if self._map_data.bonus:
             self._grid = self._mazeGenBonus.gen_map()
             self._fixed_cells = self._mazeGenBonus.full_42_celles
-            """
-            DEBUGGING
-            """
-            # self._mazeGenBonus.debug_unreachable_cells()
         else:
             self._grid = self._mazeGen.gen_map()
             self._fixed_cells = self._mazeGen.fixed_cells
