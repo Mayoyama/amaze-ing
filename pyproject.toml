@@ -13,3 +13,7 @@ dev = [
     "mypy",
     "build"
 ]
+
+[[tool.mypy.overrides]]
+module = ["mlx", "mlx.*"]
+ignore_missing_imports = true

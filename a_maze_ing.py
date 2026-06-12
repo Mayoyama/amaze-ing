@@ -4,7 +4,7 @@ from mlx import Mlx
 from dataclasses import dataclass
 from MazeGenerator.MazeGenerator import MazeGenerator
 from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
-from renderer.mlx_render import Renderer, UI_state
+from renderer.MlxRender import Renderer, UI_state
 from mazeSolver import MazeSolver
 from map_data import parse_config
 from utils import print_map
