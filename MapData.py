@@ -3,7 +3,8 @@ import sys
 
 
 @dataclass
-class mapData:
+class MapData:
+    """Dataclass that holds acts as a container for the parsed data"""
     width: int
     height: int
     entry: tuple[int, int]
@@ -14,8 +15,14 @@ class mapData:
     bonus: bool
 
 
-def parse_config() -> mapData:
+def parse_config() -> MapData:
+    """Parses information from the config file in a strict order-based
+    manner
+"""
     def found_value(param: str, value: str) -> int:
+        """Validates that the string is numeric, and if so, returns it
+        as an integer
+        """
         if (value.isnumeric()):
             return (int(value))
         else:
@@ -24,6 +31,9 @@ def parse_config() -> mapData:
             raise ValueError(f"{param}: {value} is not valid")
 
     def inputfile() -> str:
+        """Verifies that the correct number of arguments are received from
+        the command prompt
+        """
         if len(sys.argv) != 2:
             print("You should give one argument to the program. Example: "
                   "python3 a_maze_int.py <file.name>", file=sys.stderr)
@@ -37,7 +47,10 @@ def parse_config() -> mapData:
     except (FileNotFoundError, PermissionError, IsADirectoryError) as e:
         print(f"Cannot access config file: {e}", file=sys.stderr)
         sys.exit(1)
-
+    """
+    Initialise tuples to reassure linters that they will have a value
+    by the end of the if/elif blocks
+    """
     entry: tuple[int, int] = (0, 0)
     exit: tuple[int, int] = (0, 0)
     nbr_line = 0
@@ -97,11 +110,7 @@ def parse_config() -> mapData:
             nbr_line += 1
 
         elif (line.startswith("SEED=") and nbr_line == 6):
-            """
-            DEBUGGING
-            """
-
-            seed: int = found_value("SEED", line[5:].strip())  # randint(1,100)
+            seed: int = found_value("SEED", line[5:].strip())
             nbr_line += 1
 
         elif (line.startswith("BONUS=") and nbr_line == 7):
@@ -119,12 +128,13 @@ def parse_config() -> mapData:
                          "field(s)")
 
     # Ensure dimensions are positive
-    if width <= 0 or height <= 0:
-        raise ValueError("Width and height must be positive")
+    if width < 2 or height < 2:
+        raise ValueError("Width and height must be positive, "
+                         "and greater than 2")
 
     # Set maximum allowed dimensions to 50
-    if width > 100 or height > 100:
-        raise ValueError("Maximum size of map is 100")
+    if width > 100 or height > 75:
+        raise ValueError("Maximum size of map is 75")
 
     # Validate that ENTRY is inside map bounds
     if not (0 <= entry[0] < height and 0 <= entry[1] < width):
@@ -138,5 +148,5 @@ def parse_config() -> mapData:
     if (exit == entry):
         raise ValueError("EXIT and ENTER should be different points")
 
-    return mapData(width, height, entry, exit, output_file,
+    return MapData(width, height, entry, exit, output_file,
                    perfect, seed, bonus)

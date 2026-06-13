@@ -1,4 +1,4 @@
-from map_data import mapData
+from MapData import MapData
 from dataclasses import dataclass
 from typing import Any
 
@@ -36,7 +36,7 @@ class Renderer:
         _ui: Shared UI state containing colors and display options.
     """
 
-    def __init__(self, grid: list[list[int]], map_data: mapData,
+    def __init__(self, grid: list[list[int]], map_data: MapData,
                  fixed_cells: set[tuple[int, int]], data: memoryview,
                  img_w: int, img_h: int, size_line: int, cell_size: int,
                  ui: UI_state) -> None:

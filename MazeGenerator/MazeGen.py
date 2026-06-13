@@ -6,10 +6,11 @@ utilized across different maze generation algorithms.
 """
 
 import random
-from map_data import mapData
+from MapData import MapData
+from abc import ABC, abstractmethod
 
 
-class MazeGenBase():
+class MazeGenBase(ABC):
     """An algorithmic engine responsible for carving 2D grid mazes.
 
     Attributes:
@@ -30,7 +31,7 @@ class MazeGenBase():
         fixed_cells (set[tuple[int, int]]): Grid coordinates reserved by
             the '42' pattern.
     """
-    def __init__(self, data: mapData, pattern_42: list[list[int]]) -> None:
+    def __init__(self, data: MapData, pattern_42: list[list[int]]) -> None:
         """Initializes maze config and instantiates a solid wall grid."""
         self.width = data.width
         self.height = data.height
@@ -175,3 +176,7 @@ class MazeGenBase():
                 if is_open_room:
                     self.grid[scan_r + 1][scan_c + 1] |= 1
                     self.grid[scan_r][scan_c + 1] |= 4
+
+    @abstractmethod
+    def gen_map(self) -> list[list[int]]:
+        pass

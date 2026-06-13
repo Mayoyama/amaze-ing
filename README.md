@@ -21,17 +21,26 @@ Welcome to the **A-Maze-ing** project repository. This document serves as the co
 ## Description
 
 ### Project Goal
-The goal of this project is to generate a maze, render it using a **graphical display via the MiniLibX (MLX) library**, find the optimal path from start to finish, and display that solution on the screen.
+The goal of this project is to generate, solve, and visually render 2D mazes based on a configuration file. The system produces a deterministic maze (based on a seed), finds the shortest path between entry and exit points, and renders everything to the screen using a graphical display via the MiniLibX (MLX) library.
 
 ### Overview
 * **Language:** Written in Python 3.10.
 * **Generation & Reproducibility:** The maze is randomly generated, but supports full reproducibility using a seed. 
 * **Cell Structure:** Each cell in the maze has between 0 and 4 walls corresponding to the cardinal points (North, East, South, West).
 * **Features:** 
-  * The maze features a visible "42" pattern drawn by several fully closed cells (and yes, you can customize its color! *\_*).
+  * The maze features a visible "42" pattern drawn by several fully closed cells (and yes, you can customize its color!).
   * Supports the creation of both **perfect maps** (exactly one valid path) and **non-perfect maps** (multiple possible paths/loops).
 * **Storage:** Cells are stored sequentially row by row, with one row per line.
 
+
+The program follows a full pipeline:
+
+1. A configuration file is parsed into a structured `MapData` object.
+2. A maze grid is generated using either a standard generator or a bonus variant.
+3. The grid encodes walls using bitwise values per cell.
+4. A BFS-based solver computes the shortest path between ENTRY and EXIT.
+5. The maze is rendered in a graphical window using MLX, including optional overlays such as the solution path, a sprite animation along the path, and a fixed “42” pattern embedded into the maze.
+6. The final maze and solution can also be exported to a text file.
 ---
 
 ### Maze Bitmask Reference Key 
@@ -48,14 +57,12 @@ Each cell is represented by a 4-bit integer (ranging from 0 to 15).
 | **Bit 3 (MSB)** | West (W) | 8 | `1000` | `0x8` |
 
 #### Common State Examples:
-* **15** (`0xF` / `1111`) $\rightarrow$ All 4 walls **CLOSED** (Initial grid state)
-* **0** (`0x0` / `0000`) $\rightarrow$ Crossroads; all 4 walls **OPEN**
-* **11** (`0xB` / `1011`) $\rightarrow$ South wall is **OPEN**; North, East, and West are **CLOSED**
-* **10** (`0xA` / `1010`) $\rightarrow$ East and West **CLOSED**; North and South **OPEN** (Vertical Hallway)
+* **15** (`0xF` / `1111`) => All 4 walls are **CLOSED** (Initial grid cell state)
+* **0** (`0x0` / `0000`) => Crossroads; all 4 walls are **OPEN**
+* **5** (`0x5` / `0101`) => East, and West are **OPEN**; North and South are **CLOSED** (Horizontal Hallway)
+* **10** (`0xA` / `1010`) => North and South **OPEN**; East and West are **CLOSED** (Vertical Hallway)
+* **11** (`0xB` / `1011`) => South wall is **OPEN**; North, East, and West are **CLOSED**
 
----
-
-* After the executing, we print in output file our maze using a hexadecimal wall representation, entry and exit point, the good path.
 
 [▲ Back to Top](#table-of-contents)
 
@@ -67,24 +74,26 @@ Each cell is represented by a 4-bit integer (ranging from 0 to 15).
 <!-- List any system dependencies, Python version requirements, or terminal requirements here -->
 * **OS:** Linux or macOS (required for MiniLibX compatibility).
 * **Language:** Python 3.10 or higher.
+* A standard 'python -m venv' named maze_venv
 * **Python Packages:** `mypy` and `flake8` (for linting and development).
+* A working installation of MLX provided via local wheel (`mlx-2.2-py3-none-any.whl`)
 
 ### Installation / Setup
 To install the project, clone the repository and run the setup command in your terminal:
 
 ```bash
 git clone <repository-url>
-cd amaze-ing
 make install
 ```
 
-All the required dependencies and files will be automatically installed.
+All the required dependencies, venv and files will be automatically installed.
 
 ### Execution
 
 To run the program execute:
 
 ```bash
+source maze_venv/bin/activate 
 make run
 ```
 
@@ -92,11 +101,13 @@ You can also use the following development and utility commands:
 
 * make debug — Launches the program in debug mode with verbose logging.
 
-* make clean — Cleans up temporary files and deletes the .mypy_cache folder.
+* make clean — Cleans up temporary files and deletes the .mypy_cache and .pycache folders.
 
-* make lint — Runs flake8 and mypy with the required flags to check for code style and type compliance.
+* make lint — Runs `flake8` and `mypy` with the required flags to check for code style and type compliance.
 
-* make lint_strict — Performs the same checks as make lint, but enforces mypy with the --strict flag.
+* make lint_strict — Performs the same checks as make lint, but enforces mypy with the `--strict` flag.
+
+* make uninstall - In addition to running `make clean`, it will also remove the venv. Note the venv must be deactivated before the venv folder can be removed.
 
 
 [▲ Back to Top](#table-of-contents)
@@ -125,17 +136,17 @@ The configuration file passed as an argument must contain the following variable
 
     - BONUS: Set to True or False to enable or disable bonus maze.
 
-Note: You can include comments in the configuration file; lines starting with # will be ignored.
+Note: You can include comments in the configuration file; blank lines and lines starting with # will be ignored.
 
 ### Complete Template
 ```ini
 # Example configuration structure mapping variables.
-WIDTH=22
+WIDTH=20
 HEIGHT=20
-ENTRY=1,1
-EXIT=17,19
+ENTRY=10,10
+EXIT=15,15
 OUTPUT_FILE=output_maze.txt
-PERFECT=False
+PERFECT=True
 SEED=45
 BONUS=False
 ```
@@ -144,16 +155,19 @@ BONUS=False
 
 To ensure stability, proper rendering performance, and logical consistency, the configuration file must adhere to the following rules:
 
-* **Dimensions:**  Width and height must be integers between $0$ and $75$.
-    * *Reasoning:*  Setting dimensions higher than 75 significantly degrades performance during the graphical MiniLibX (MLX) animation, as the entire maze grid is redrawn on every single frame.
+* **Dimensions:**  Width and height must be integers between `2` and `75`.
+    * *Reasoning:*  While it is possible to render maps larger than 75x75, setting dimensions higher than 75 significantly degrades performance during the graphical MiniLibX (MLX) animation, as the entire maze grid is redrawn on every single frame.
 
-* **Coordinates:** * The entry and exit points must be located strictly within the bounds of the map.
+* **Coordinates:** 
+  * The entry and exit points must be located strictly within the bounds of the map.
   * The entry and exit coordinates cannot be identical.
   * The entry and exit points cannot overlap with any cells designated for the "42" pattern.
 
 * **Special Rules:** 
-  * **SEED**: Must be a valid integer. Providing the same seed ensures identical maze generation for testing and reproducibility.
+  * **SEED**: Must be a valid **positive** integer. Providing the same seed ensures identical maze generation for testing and reproducibility.
   * **PERFECT & BONUS**: These flags must strictly be set to either `True` or `False`.
+
+NB: If any values in the config file are invalid or left blank, an appropriate error message will be provided, and the program will terminate.
 
 [▲ Back to Top](#table-of-contents)
 
@@ -162,27 +176,51 @@ To ensure stability, proper rendering performance, and logical consistency, the 
 ## Technical Design & Algorithms
 
 ### Chosen Maze Generation Algorithm
-<!-- Specify the concrete algorithm implemented for maze generation -->
 
-### Selection Justification
-<!-- Explain the specific reasons why this algorithm was chosen for the architectural scope of the project -->
+The primary generator uses a **Depth-First Search** (DFS) backtracking algorithm implemented with an explicit stack.
+
+The algorithm begins at a starting cell and repeatedly moves to a randomly chosen unvisited neighbor, removing the wall between the two cells. When a cell has no unvisited neighbors remaining, the algorithm backtracks to the most recent cell with unexplored paths and continues the process. This continues until all reachable cells have been visited, producing a fully connected maze. When perfect maze generation is enabled, there is exactly one unique path between any two points in the maze.
+
+#### Selection Justification
+DFS backtracking was chosen because:
+- Produces perfect mazes when enabled
+- Simple stack-based implementation
+- Deterministic with seed
+- Produces long corridors
 
 ### Pathfinding Solver
-<!-- Describe the shortest-path algorithm utilized to find the exit route -->
+**Breadth-First Search** (BFS) is used to guarantee shortest path in an unweighted grid.
+
+BFS is a graph traversal algorithm that explores all possible positions in a maze level by level. Starting from the entry point, it first visits all directly reachable neighboring cells, then expands outward to their neighbors, and so on. This “layer-by-layer” exploration ensures that the first time the exit is reached, the path taken is the shortest possible in terms of number of steps.
+
+In this project, BFS keeps track of visited cells and records the previous cell for each step, allowing the final path to be reconstructed by backtracking from the exit to the entry once the search completes
+
 
 ### Chosen Maze Generation Algorithm for Bonus
 
-For the bonus algorithm, we implemented a modified variation of the **Sidewinder algorithm**. The generation process iterates through the grid row by row from top to bottom, and from right to left. For each individual cell, the algorithm makes a randomized decision on whether to destroy the eastern (right) wall or the southern (bottom) wall. As it processes each cell, it actively checks the state of its neighbors and merges them accordingly into sets. 
+For the bonus algorithm, we implemented a modified variation of the **Sidewinder** algorithm. The generation process iterates through the grid row by row from top to bottom, and from right to left. For each individual cell, the algorithm makes a randomized decision on whether to destroy the eastern (right) wall or the southern (bottom) wall. As it processes each cell, it actively checks the state of its neighbors and merges them accordingly into sets. 
 
 A distinct structural feature (and limitation) of this algorithm is its inherent geometric bias: because of the way boundaries are handled at the edges, the **far-right corridor** and the **bottom row** of the maze will always be completely open and devoid of intersecting walls.
 
 #### Selection Justification
 
-This algorithm was interesting to implement, it was easy to understand, it is totally different of our main algrithm, and it was compatible with our 42 pattern(but we moved it to the top right corner).
+**Sidewinder adaptation** algorithm was chosen because:
+- Was interesting to implement
+- Was easy to understand
+- Is totally different of our main algorithm
+- Was compatible with our "42" pattern requirement
 
 ### Non-perfect map
 
-Both our algorithme create a perfect map. So for do non-perfect map we destroy some of the cells(we decide by rondom how many cells we want to destroy from 5 to 15), after we look again in all the cells and checks the neighbours, if needed we change it. We also created one protected box for not distroy 42 pattern.
+Both of our algorithms create a perfect map. So for the non-perfect map we destroy some of the cells. `Random.randint` is used to select a predetermined number of cells to destroy (ranging from 5 to 15). Care is also taken to ensure the neighbouring cell's wall integrity is maintained. We also created a protective barrier around the "42" pattern to ensure it is not affected by the process.
+
+### Issue regarding linters and the MiniLibX python wrapper
+
+Mlx is not a native module/library for python. It is actually a **C-language library**, which has had a wrapper applied to it. The wrapper does not have any typing, which causes `mypy --strict` to complain about the lack of typing **in the module itself**:
+```ini
+a_maze_ing.py:3: error: Skipping analyzing "mlx": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+```
+Since modifying the module and wrapper is outside the scope of this project and not feasible with a prepackaged .whl, we decided to handle this mypy error through a mypy config rule in the `pyproject.toml`.
 
 [▲ Back to Top](#table-of-contents)
 
@@ -195,12 +233,17 @@ When rendering the maze using the MiniLibX (MLX) graphical interface, you can in
 * **Key [1]**: Change the primary maze color.
 * **Key [2]**: Change the "42" pattern color.
 * **Key [3]**: Toggle the visibility of the shortest path (Show/Hide).
-* **Key [4]**: Toggle the path-solving animation.
-* **Key [5]**: Generate a new **perfect map** using the primary algorithm.
+* **Key [4]**: Animated sprite traversal along path - Using in-built functions from MLX, the user can start, pause and restart the animation of a fish sprite, which swims along the path from the start to the end.
+* **Key [5]**: Generate a new **perfect map** using the primary (DFS) algorithm.
 * **Key [6]**: Generate a new **non-perfect map** using the primary algorithm.
-* **Key [7]**: Generate a new **perfect map** using the bonus algorithm.
-* **Key [8]**: Generate a new **non-perfect map** using the bonus (Sidewinder) algorithm.
+* **Key [7]**: Generate a new **perfect map** using the bonus (Sidewinder adaptation) algorithm.
+* **Key [8]**: Generate a new **non-perfect map** using the bonus algorithm.
 * **Key [ESC]**: Safely exit the program and close the graphical window.
+
+Export of maze + solution path to text file:
+
+In addition to the above, upon each generation of a new maze, a file output_maze.txt will be generated and populated with a hex representation of the cell values, the start and end coordinates and the directions of how to move between the start and end points.
+
 
 [▲ Back to Top](#table-of-contents)
 
@@ -209,10 +252,131 @@ When rendering the maze using the MiniLibX (MLX) graphical interface, you can in
 ## Code Reusability
 
 ### Reusable Components
-<!-- List specific classes, helper modules, or functional structures that were built to be modular -->
+- MazeSolver (BFS pathfinding) - Requires a populated maze grid (`list[list[int]]`) and map data
+- Renderer (visual layer) - Limited reusability as it requires various external data currently provided by `App()` to function fully, but could be adapted to render similar objects in the future.
+- ExportMap (export utility) - Requires a maze (from a mazegenerator), map data and a string with the path
+- MapData (configuration model) - Requires the following data to be either parsed from a config file, using `parse_config()` or instantiated separately.
+```ini
+width: int
+height: int
+entry: tuple[int, int]
+exit: tuple[int, int]
+output_file: str
+perfect: bool
+seed: int
+bonus: bool
+```
+
+#### MazeGenerator / MazeGeneratorBonus Reusability
+
+In this project, the MazeGenerator code was designed modularly, in way that it could easily allow new and additional algorithms to be added relatively easily simply by creating a child class that inherits from the `MazeGenBase(ABC)` class.
+
+To instantiate the primary DFS-based algorithm, the following are required:
+- Maze data - outlined above
+- pattern_42: `list[list[int]]` - this is a customizable pattern that will be embedded into the maze. 
+```ini
+DFS example:
+    pattern_42 = [
+        [1, -1, -1, -1, 1, 1, 1],    # Row 0: █ . . . █ █ █
+        [1, -1, 1, -1, -1, -1, 1],   # Row 1: █ . █ . . . █
+        [1, 1, 1, -1, 1, 1, 1],      # Row 2: █ █ █ . █ █ █
+        [-1, -1, 1, -1, 1, -1, -1],  # Row 3: . . █ . █ . .
+        [-1, -1, 1, -1, 1, 1, 1],    # Row 4: . . █ . █ █ █
+    ]
+
+Sidewinder example:
+    pattern_42 = [
+        [0, 6, 10, 12, 0, 0, 0],     # Row 0: █ . . . █ █ █
+        [0, 1, 0, 7, 10, 8, 0],      # Row 1: █ . █ . . . █
+        [0, 0, 0, 5, 0, 0, 0],       # Row 2: █ █ █ . █ █ █
+        [6, 12, 0, 5, 0, 2, 10],     # Row 3: . . █ . █ . .
+        [1, 5, 0, 5, 0, 0, 0],       # Row 4: . . █ . █ █ █
+    ]
+```
+As you can see, the pattern is completely flexible in how it is implemented, according to the needs of the individual maze algorithm. The pattern_42 should be set as a class variable before the \_\_init__ definition and should be initialised in the `super().__init__()`.
+
+    def __init__(self, data: MapData) -> None:
+        """Initializes maze config."""
+        super().__init__(data, pattern_42=self.pattern_42)
+
+To instantiate the DFS-based maze generator, use:
+```ini
+mazeGen = MazeGenerator(map_data)
+```
+
+An instance of the MapData dataclass type object can be instantiated as:
+```ini
+map_data = MapData(width, height, entry, exit, output_file, perfect, seed, bonus)
+```
+Additional parameters can be added or removed by adjusting the MapData dataclass
+```ini
+Example:
+@dataclass
+class MapData:
+    width: int
+    height: int
+    entry: tuple[int, int]
+    exit: tuple[int, int]
+    output_file: str
+    perfect: bool
+    seed: int
+    bonus: bool
+    NEW_PARAMETER: {data type}
+```
+
+and made available in the mapgenerator class by setting a class variable from data.{...} :
+```ini
+Example:
+def __init__(self, data: MapData, pattern_42: list[list[int]]) -> None:
+    """Initializes maze config and instantiates a solid wall grid."""
+    self.width = data.width
+    self.height = data.height
+    self.NEW_PARAM = data.{param name}
+```
+
+Since the parent class is an Abstract Base Class (ABC), all inheriting children must have a gen_map method, which is what will be called to generate a new map. It is prototyped as:
+```ini
+def gen_map(self) -> list[list[int]]:
+```
+
+This method will contain the necessary code to generate the populated map, and will vary greatly depending on the map generation algorithm used. It should `return self.map`, to be accessed by the calling function or method
+```ini
+Example from DFS algorithm:
+def gen_map(self) -> list[list[int]]:
+    """Generates the full maze layout."""
+    random.seed(self.seed)
+
+    self._validate_point()
+
+    start_cell = (self.height - 1, 0)
+
+    stack: list[tuple[int, int]] = [start_cell]
+    visited: set[tuple[int, int]] = {start_cell} | self.fixed_cells
+
+    while stack:
+        current = stack[-1]
+        valid_dests = self._check_valid_neighbors(current, visited)
+
+        if valid_dests:
+            next_cell = random.choice(valid_dests)
+            self._open_wall(current, next_cell)
+            visited.add(next_cell)
+            stack.append(next_cell)
+        else:
+            stack.pop()
+
+    self._final_map_adjustment()
+    return self.grid
+```
+
+This grid could then be used with utilities such as ExportMap and MazeSolver, and then rendered to the screen using Renderer
+
 
 ### Extension Guidelines
-<!-- Explain how these components can be reused or extended for future programming scopes or projects -->
+- Add new generators by matching grid format + bitmask encoding
+- Solver works with any compatible grid
+- Renderer extended via UI_state
+- Config extensible via MapData updates
 
 [▲ Back to Top](#table-of-contents)
 
@@ -221,12 +385,26 @@ When rendering the maze using the MiniLibX (MLX) graphical interface, you can in
 ## Resources & AI Usage
 
 ### Technical References
-* [Reference Name](URL) — *Brief description of what this documentation/article provided.*
-* [Reference Name](URL) — *Brief description of what this documentation/article provided.*
+
+* [Maze Algorithms — Jamis Buck](https://www.jamisbuck.org/mazes/) — Interactive demonstrations and explanations of many maze generation algorithms, including Recursive Backtracking, Sidewinder, Prim's, Kruskal's, Wilson's, and more.
+* [Maze Generation: Sidewinder Algorithm — Jamis Buck](https://weblog.jamisbuck.org/2011/2/3/maze-generation-sidewinder-algorithm.html) — Detailed explanation of the Sidewinder algorithm, including implementation details and discussion of its strengths and weaknesses.
+* [Maze Generation Algorithm — Wikipedia](https://en.wikipedia.org/wiki/Maze_generation_algorithm) — Overview of common maze generation approaches including DFS, Prim's, Kruskal's, Eller's, Binary Tree, and Sidewinder algorithms.
+* [Breadth-First Search (BFS) — Wikipedia](https://en.wikipedia.org/wiki/Breadth-first_search) — Reference for the shortest-path algorithm used to solve the maze.
+* [Depth-First Search (DFS) — Wikipedia](https://en.wikipedia.org/wiki/Depth-first_search) — Background information on DFS traversal, which forms the basis of the recursive backtracker maze generator.
+* [Deque — Python Documentation](https://docs.python.org/3/library/collections.html#collections.deque) — Documentation for the queue structure used by the BFS pathfinding implementation.
+* [Dataclasses — Python Documentation](https://docs.python.org/3/library/dataclasses.html) — Reference for the `@dataclass` structures used throughout the project for configuration and UI state management.
+* Mlx documentation provided in the whl file
 
 ### AI Usage & Attributions
-* **Tasks Delegated to AI:** <!-- Specify which architectural patterns or logic steps utilized AI assistance -->
-* **Project Areas Impacted:** <!-- Specify the exact files or components built using AI tools -->
+* **Tasks Delegated to AI:** 
+	- Designing the format of the README
+	- Providing a breakdown of the functions of the MLX wrapper 
+	- Debugging MLX related errors
+	- Gathering information relating to things such as different algorithms for maze generation and solving, bit operations, math related to rendering pixels to the screen with MLX etc
+	
+* **Project Areas Impacted:** 
+	- README.md
+	- Assistance in understanding how to render the PNG sprite to the screen and animation loops in mlx_render.py
 
 [▲ Back to Top](#table-of-contents)
 
@@ -237,22 +415,44 @@ When rendering the maze using the MiniLibX (MLX) graphical interface, you can in
 ### Team Roles & Responsibilities
 * **speterse:**
 
-  Handled the entirety of the graphical rendering using the MiniLibX (MLX) library. He developed the primary maze-generation algorithm as well as the pathfinding algorithm used to solve for the optimal route. Additionally, he implemented all real-time interactive features. One of his most innovative contributions was engineering the path animation featuring a small fish that automatically scales its size based on the dimensions of the maze cells. He also took charge of code readability and refactoring. A fantastic teammate all around!
+  Team leader. Creation of the App() class and the overall structure of how the program would run. Handled the entirety of the graphical rendering using the MiniLibX (MLX) library. He developed the primary maze-generation algorithm as well as the pathfinding algorithm used to solve for the optimal route. Additionally, he implemented all real-time interactive features. One of his most innovative contributions was engineering the path animation featuring a small fish that automatically scales its size based on the dimensions of the maze cells. He also took charge of code readability. A fantastic teammate all around!
 
 * **ikryvenk:**
 
-  Spearheaded the robust configuration file parser, ensuring all inputs are validated against project constraints. He implemented the bonus maze-generation algorithm and wrote the core post-processing logic required to transform perfect mazes into non-perfect ones by safely introducing loops.
+  Awesome partner. Spearheaded the robust configuration file parser, ensuring all inputs are validated against project constraints. He implemented the bonus maze-generation algorithm and wrote the core post-processing logic required to transform perfect mazes into non-perfect ones by safely introducing loops. Took charge of refactoring parent-child relationshiips of the maze generation logic.
 
-<!--I propose to delete this part-->
 
-<!--### Project Planning & Evolution
-<!-- Detail the initial anticipated milestones, schedule constraints, and how the workflow evolved dynamically through development -->
+### Project Planning & Evolution
 
-<!--### Retrospective
-* **What Worked Well:** <!-- Detail successful project choices, collaboration strategies, or design patterns -->
-<!--* **Areas for Improvement:** Detail what was challenging and how workflows could be optimized next time-->
+From the start, speterse took leadership of the project. Due to different levels of progression in the python modules, tasks were roughly divided based on progression:
+* speterse: setting up the overall Mazegenerator() and App() class structures, implementing the original maze generation logic
+* ikryvenk: data parsing, continuous testing and debugging, README
 
-<!--### Toolkit
-List any specific workflow tools, version control mechanisms, tracking systems, or environment checkers used-->
+As the project advanced, speterse decided to implement the MiniLibX module to render the map to the screen rather than rendering to the terminal. This decision was made for a few reasons:
+1. Interest in learning how to render pixels to the screen
+2. Greater flexibility and control in exactly how the maze would be rendered (not restricted to ASCII representations)
+3. Allowed for animation using a PNG (decision to add animation was made after the map rendering itself was stabilised)
+4. Overall visually impressive output
+
+Workflow was controlled via an online repository hosted on GitHub. The primary version of the code was kept on a "Testing" branch, with several other branches made as the project progressed.
+Although we worked on our respective tasks somewhat independently, we met several times to discuss progress and to identify remaining tasks and contacted each other via slack.
+
+In regards to anticipated milestones, it was hoped that the project could be finished by June 11th, knowing that we have other external commitments to also take care of. However, due to some major bugs, an extra few days were required to finish debugging and refactoring of the code.
+
+### Retrospective
+* **What Worked Well:** 
+* Both team members were committed to the project and actively worked on their respective parts. 
+* Our collaboration style was mainly to to work individually on most of the tasks, but also keep an open communication line and discuss things face-to-face, which really helped to keep the project going smoothly overall.
+* When one person finished a task, they checked with the other what else needed to be done, which meant both members were always actively working on something.
+
+* **Areas for Improvement:**
+* Unfortunately, at the start, there was a bit of miscommunication about the workflow regarding testing branch and individual sub-branches on GitHub, causing work to be pushed to the wrong branch.
+* Also, there was a situation where a section of the code had been refactored differently on each of our respective branches, which posed a challenge when it came time to resolving merge conflicts between the 2 versions.
+* As team leader, I should have taken extra care to go over these things, both at the start of and during the project.
+* The original DFS algorith had the '42' logo in the middle, however it was proving difficult to implement the bonus algorith while keeping it in the middle. A compromise was reached that both algorithms would position the logo in the top left corner of the map. If I did this project again, I would like to have had more time to explore a way to make it work for both algorithms to be able to have the logo in the center instead.
+
+### Toolkit
+The code was hosted on a GitHub repository, and in general it worked ok by having a testing branch and then making sub-branches from the testing branch.
+We used the provided 'output_validator.py' checker as well as manual checking of the output_maze.txt file to ensure the integrity of cell-pair walls were being maintained and respected.
 
 [▲ Back to Top](#table-of-contents)

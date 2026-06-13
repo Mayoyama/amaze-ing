@@ -7,7 +7,7 @@ Sidewinder algorithm.
 """
 
 import random
-from map_data import mapData
+from MapData import MapData
 from MazeGenerator.MazeGen import MazeGenBase
 
 
@@ -26,7 +26,7 @@ class MazeGeneratorBonus(MazeGenBase):
         [1, 5, 0, 5, 0, 0, 0],       # Row 4: . . █ . █ █ █
     ]
 
-    def __init__(self, data: mapData) -> None:
+    def __init__(self, data: MapData) -> None:
         """Initializes the maze configuration."""
         super().__init__(data, pattern_42=self.pattern_42)
         self.full_42_celles = self._embed_42_pattern("full")

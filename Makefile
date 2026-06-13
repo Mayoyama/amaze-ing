@@ -43,11 +43,11 @@ lint:
 		--ignore-missing-imports \
 		--disallow-untyped-defs \
 		--check-untyped-defs \
-		--exclude 'maze_venv|misc_files' .
+		--exclude 'maze_venv' .
 
 lint-strict:
 	flake8 . --exclude=maze_venv/,misc_files/ || true
-	$(PYTHON) -m mypy . --strict --exclude 'maze_venv|misc_files'
+	$(PYTHON) -m mypy . --strict --exclude 'maze_venv'
 
 build:
 	$(PYTHON) -m build

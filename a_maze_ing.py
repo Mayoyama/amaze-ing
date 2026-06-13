@@ -2,24 +2,24 @@ import os
 from random import choice
 from mlx import Mlx
 from dataclasses import dataclass
+from typing import cast, Any
 from MazeGenerator.MazeGenerator import MazeGenerator
 from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
-from renderer.MlxRender import Renderer, UI_state
-from mazeSolver import MazeSolver
-from map_data import parse_config
-from utils import print_map
-from typing import cast, Any
+from Rendering.MlxRender import Renderer, UI_state
+from Utils.MazeSolver import MazeSolver
+from MapData import parse_config
+from Utils.Utils import ExportMap
 
 
 @dataclass(frozen=True)
-class render_settings:
+class RenderSettings:
     """
-    Stores rendering configuration values such as window dimensions
-    and maze cell size.
+    Stores and freezes rendering configuration values such as window
+    dimensions and maze cell size.
     """
     min_win_width: int = 550
-    cell_size: int = 20
-    sprite_path: str = "renderer/puffy_tiny.png"
+    cell_size: int = 10
+    sprite_path: str = "Rendering/puffy_tiny.png"
 
 
 class App:
@@ -53,7 +53,7 @@ class App:
         self._map_data = parse_config()
         self._mazeGen = MazeGenerator(self._map_data)
         self._mazeGenBonus = MazeGeneratorBonus(self._map_data)
-        self._r_config = render_settings()
+        self._r_config = RenderSettings()
         self._ui = UI_state()
         self._mlx = Mlx()
         self._mlx_ptr = self._mlx.mlx_init()
@@ -148,9 +148,9 @@ class App:
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
         self._ui.show_sprite = False
         if self._map_data.bonus:
-            print_map(self._mazeGenBonus, self._map_data, self._pathstr)
+            ExportMap(self._mazeGenBonus, self._map_data, self._pathstr)
         else:
-            print_map(self._mazeGen, self._map_data, self._pathstr)
+            ExportMap(self._mazeGen, self._map_data, self._pathstr)
 
     def _draw_menu(self) -> None:
         menu_x = self._r_config.cell_size
@@ -263,9 +263,9 @@ class App:
         self._renderer.render_grid(self._path_cells)
 
         if self._map_data.bonus:
-            print_map(self._mazeGenBonus, self._map_data, self._pathstr)
+            ExportMap(self._mazeGenBonus, self._map_data, self._pathstr)
         else:
-            print_map(self._mazeGen, self._map_data, self._pathstr)
+            ExportMap(self._mazeGen, self._map_data, self._pathstr)
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._win,
             self._img, 0, 0)
