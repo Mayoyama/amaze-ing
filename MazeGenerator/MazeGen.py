@@ -109,14 +109,31 @@ class MazeGenBase():
 
     def _non_perfect(self) -> None:
         """Introduces loops into the maze by destroying walls at a random number of locations."""
-        if not self.perfect_map:
+        def _check_wall() -> None:
+            for col in range(self.width):
+                if self.grid[0][col] & 1 == 0:
+                    self.grid[0][col] |= 1
+                if self.grid[self.height - 1][col] & 4 == 0:
+                    self.grid[self.height - 1][col] |= 4
+            for row in range(self.height):
+                if self.grid[row][0] & 8 == 0:
+                    self.grid[row][0] |= 8
+                if self.grid[row][self.width - 1] & 2 == 0:
+                    self.grid[row][self.width - 1] |= 2
+        if self.height < 7 and self.width < 7:
+            nbr_break = random.randint(3, 5)
+        elif self.height > 20 and self.width > 20:
+            nbr_break = random.randin(20, 40)
+        else:
             nbr_break = random.randint(5, 20)
-            for _ in range(nbr_break):
-                random_row = random.randint(1, self.height - 2)
-                random_col = random.randint(1, self.width - 2)
-                if (random_row - 1, random_col - 1) not in self.fixed_cells:
-                    rnd = 15
-                    self.grid[random_row][random_col] &= ~rnd
+        for _ in range(nbr_break):
+            random_row = random.randint(1, self.height)
+            random_col = random.randint(1, self.width)
+            if (random_row - 1, random_col - 1) not in self.fixed_cells:
+                rnd = 15
+                self.grid[random_row - 1][random_col - 1] &= ~rnd
+        _check_wall()
+            
 
     def _remove_excessive_rooms(self) -> None:
         """Scans in a 3x3 window and adds a wall if a blank 3x3 space is found."""
