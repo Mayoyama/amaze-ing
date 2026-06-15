@@ -29,7 +29,7 @@ class MazeGeneratorBonus(MazeGenBase):
     def __init__(self, data: MapData) -> None:
         """Initializes the maze configuration."""
         super().__init__(data, pattern_42=self.pattern_42)
-        self.full_42_celles = self._embed_42_pattern("full")
+        self.full_42_cells = self._embed_42_pattern("full")
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout."""

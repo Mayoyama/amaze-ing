@@ -8,7 +8,7 @@ from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
 from Rendering.MlxRender import Renderer, UI_state
 from Utils.MazeSolver import MazeSolver
 from MapData import parse_config
-from Utils.Utils import ExportMap
+from Utils.Utils import export_map, find_alt_paths
 
 
 @dataclass(frozen=True)
@@ -58,23 +58,52 @@ class App:
         self._mlx = Mlx()
         self._mlx_ptr = self._mlx.mlx_init()
 
+        self._generate_maze()
+        self._load_sprite()
+        self._compute_window_size()
+        self._init_mlx_window()
+        self._init_renderer()
+
+    def _generate_maze(self) -> None:
+        """Generates the maze grid (DFS or sidewinder bonus, per config)
+        and computes its solution path.
+        """
         if self._map_data.bonus:
             self._grid = self._mazeGenBonus.gen_map()
-            self._fixed_cells = self._mazeGenBonus.full_42_celles
+            self._fixed_cells = self._mazeGenBonus.full_42_cells
         else:
             self._grid = self._mazeGen.gen_map()
             self._fixed_cells = self._mazeGen.fixed_cells
         self._solver = MazeSolver(self._grid, self._map_data)
         self._path_cells, self._pathstr = self._solver.generate_final_path()
 
-        self._win_width = max(self._r_config.min_win_width,
-                              (len(self._grid[0]) + 2) *
-                              self._r_config.cell_size)
-        self._win_height = (len(self._grid)
-                            + 1) * self._r_config.cell_size + 160
-        self._img_width = self._win_width
-        self._img_height = self._win_height
+    def _compute_window_size(self) -> None:
+        """Computes window and image pixel dimensions.
 
+        The window is sized to fit the maze plus the menu strip below it
+        (the +160). The image is sized to cover just the maze plus
+        margin, with a small extra allowance (overflow_x/overflow_y) so
+        the sprite is never clipped when drawn at the last row/column.
+        Keeping the image smaller than the window means clear_map() and
+        the per-frame blit never touch the menu's pixels, so the menu no
+        longer needs to be redrawn every frame.
+        """
+        cell = self._r_config.cell_size
+
+        self._win_width = max(self._r_config.min_win_width,
+                              (len(self._grid[0]) + 2) * cell)
+        self._win_height = (len(self._grid) + 1) * cell + 160
+
+        overflow_x = max(0, self._sprite_width
+                         - Renderer.SPRITE_OFFSET_X - cell)
+        overflow_y = max(0, self._sprite_height
+                         - Renderer.SPRITE_OFFSET_Y - cell)
+
+        self._img_width = (len(self._grid[0]) + 1) * cell + cell + overflow_x
+        self._img_height = (len(self._grid) + 1) * cell + overflow_y
+
+    def _load_sprite(self) -> None:
+        """Loads the sprite PNG and initialises animation state."""
         if not os.path.exists(self._r_config.sprite_path):
             raise FileNotFoundError(self._r_config.sprite_path)
         self._animation_tick = 0
@@ -94,6 +123,8 @@ class App:
         self._sprite_data, _, self._sprite_size_line, _ = \
             self._mlx.mlx_get_data_addr(self._sprite_img)
 
+    def _init_mlx_window(self) -> None:
+        """Creates the MLX window and its backing image buffer."""
         self._win = self._mlx.mlx_new_window(
             self._mlx_ptr,
             self._win_width,
@@ -110,6 +141,8 @@ class App:
         self._data, _, self._size_line, _ = \
             self._mlx.mlx_get_data_addr(self._img)
 
+    def _init_renderer(self) -> None:
+        """Creates the Renderer and attaches the sprite to it."""
         self._renderer = Renderer(
             self._grid,
             self._map_data,
@@ -128,31 +161,69 @@ class App:
             self._sprite_width,
             self._sprite_height
         )
-
+        # Sets up the keybinds and the rendering loops
         self._setup_keycode_hooks()
         self._setup_loop_hook()
 
+    def _verify_map(self) -> None:
+        """Analyses the current maze and prints a set number of
+        distinct start-to-exit paths exist (default is 2).
+
+        Callers should only invoke this when map_data.verbose is True —
+        find_alt_paths can take quite a long time to process on a large
+        non-perfect maze, which would otherwise make the maze window
+        appear frozen with no indication in the terminal of why.
+
+        As a further safeguard, the search is still skipped on non-perfect
+        mazes larger than 20x20, printing a message instead.
+        """
+        if (not self._map_data.perfect
+                and (self._map_data.width > 20 or self._map_data.height > 20)):
+            print("Feature unavailable for maps larger than 20x20")
+            return
+
+        count, paths = find_alt_paths(self._grid, self._map_data.entry,
+                                      self._map_data.exit)
+
+        print("Map Analysis".center(30, "="))
+        if count == 0:
+            print("Warning! Path not found!")
+        elif count == 1:
+            print(f"Maze is Perfect! Only one possible path "
+                  f"found:\n{paths[0]}")
+        else:
+            print("Multiple paths found!")
+            for path in paths:
+                print(f"Path found:\n[{path}]")
+
+    def _save_map_textfile(self) -> None:
+        """Exports the current maze, start/end points, and solution path
+        to the configured output file.
+        """
+        if self._map_data.bonus:
+            export_map(self._mazeGenBonus, self._map_data, self._pathstr)
+        else:
+            export_map(self._mazeGen, self._map_data, self._pathstr)
+
     def _regenerate_map(self) -> None:
+        """Generates a new maze using the current config (DFS or
+        sidewinder, perfect or not), recomputes its solution path, resets
+        sprite/animation state, and re-exports and re-verifies the map.
+        """
+
         self._mazeGen = MazeGenerator(self._map_data)
         self._mazeGenBonus = MazeGeneratorBonus(self._map_data)
-        if self._map_data.bonus:
-            self._grid = self._mazeGenBonus.gen_map()
-            self._renderer._fixed_cells = self._mazeGenBonus.full_42_celles
-        else:
-            self._grid = self._mazeGen.gen_map()
-            self._renderer._fixed_cells = self._mazeGen.fixed_cells
-        self._renderer._grid = self._grid
-        self._solver = MazeSolver(self._grid, self._map_data)
-        self._path_cells, self._pathstr = self._solver.generate_final_path()
+        self._generate_maze()
+        self._renderer.update_grid(self._grid, self._fixed_cells)
         self._sprite_index = 0
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
         self._ui.show_sprite = False
-        if self._map_data.bonus:
-            ExportMap(self._mazeGenBonus, self._map_data, self._pathstr)
-        else:
-            ExportMap(self._mazeGen, self._map_data, self._pathstr)
+        self._save_map_textfile()
+        if self._map_data.verbose:
+            self._verify_map()
 
     def _draw_menu(self) -> None:
+        """Draws the on-screen control legend below the maze."""
         menu_x = self._r_config.cell_size
         menu_y_start = (len(self._grid) * self._r_config.cell_size) + \
                        (self._r_config.cell_size) + 20
@@ -171,6 +242,9 @@ class App:
                                      menu_y, 0xFFFFFF, string)
 
     def _redraw_map(self) -> None:
+        """Clears and redraws the maze, optional solution path overlay,
+        optional sprite, and the menu.
+        """
         self._renderer.clear_map()
         self._renderer.render_grid(self._path_cells)
         if self._ui.show_sprite:
@@ -178,9 +252,11 @@ class App:
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._win,
             self._img, 0, 0)
-        self._draw_menu()
 
     def _next_color(self) -> tuple[int, int, int]:
+        """Returns a random colour from the palette, excluding the
+        current wall colour.
+        """
         color_palette: set[tuple[int, int, int]] = {
             (34, 139, 34), (255, 165, 0), (255, 255, 0), (255, 0, 0),
             (64, 224, 208), (0, 0, 128), (255, 192, 203), (255, 0, 255)
@@ -189,7 +265,13 @@ class App:
         return choice(list(new_color))
 
     def _setup_keycode_hooks(self) -> None:
+        """Registers the key-press handler mapping keys 1-8 and ESC to
+        display toggles, maze regeneration, and program exit.
+        """
         def key_handler(keycode: int, param: Any) -> None:
+            """Handles one key press: toggles display options, regenerates
+            the maze, or exits, then redraws the map.
+            """
             if keycode == 49:
                 self._ui.wall_color = self._next_color()
             elif keycode == 50:
@@ -215,7 +297,7 @@ class App:
             elif keycode == 54:
                 self._ui.animate_sprite = False
                 self._map_data.bonus = False
-                self._map_data.perfect = False  # (FALSE NOT IMPLEMENTED YET)
+                self._map_data.perfect = False
                 self._map_data.seed += 1
                 self._regenerate_map()
             elif keycode == 55:
@@ -224,22 +306,25 @@ class App:
                 self._map_data.perfect = True
                 self._map_data.seed += 1
                 self._regenerate_map()
-                # implement perfect bonus maze
             elif keycode == 56:
                 self._ui.animate_sprite = False
                 self._map_data.bonus = True
                 self._map_data.perfect = False
                 self._map_data.seed += 1
                 self._regenerate_map()
-                # implement non perfect bonus maze
             elif keycode == 65307:
                 self._mlx.mlx_loop_exit(self._mlx_ptr)
             self._redraw_map()
         self._mlx.mlx_key_hook(self._win, key_handler, None)
 
     def _setup_loop_hook(self) -> None:
-
+        """Registers the per-frame hook that advances the sprite one cell
+        along the solution path every other tick while animating.
+        """
         def update_img(param: Any) -> None:
+            """Advances the sprite one cell along the solution path every
+            second tick, while animation is enabled.
+            """
             if not self._ui.animate_sprite:
                 return
 
@@ -259,13 +344,21 @@ class App:
         self._mlx.mlx_loop_hook(self._mlx_ptr, update_img, None)
 
     def run(self) -> None:
+        """Renders the initial maze, exports and verifies it, then starts
+        the blocking MLX event loop.
+        """
+        if not self._mazeGen.can_fit_42():
+            print(f"Error: maze size {self._map_data.width}x"
+                  f"{self._map_data.height} is too small to fit the '42' "
+                  f"pattern (requires at least 8x6) - the pattern will be "
+                  f"omitted.")
         self._renderer.clear_map()
         self._renderer.render_grid(self._path_cells)
 
-        if self._map_data.bonus:
-            ExportMap(self._mazeGenBonus, self._map_data, self._pathstr)
-        else:
-            ExportMap(self._mazeGen, self._map_data, self._pathstr)
+        self._save_map_textfile()
+        if self._map_data.verbose:
+            self._verify_map()
+
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._win,
             self._img, 0, 0)

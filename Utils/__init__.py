@@ -1,7 +1,8 @@
 from .MazeSolver import MazeSolver
-from .Utils import ExportMap
+from .Utils import export_map, find_alt_paths
 
 __all__ = [
     "MazeSolver",
-    "ExportMap"
+    "export_map",
+    "find_alt_paths"
 ]

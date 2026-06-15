@@ -62,28 +62,28 @@ class MazeGenBase(ABC):
             grid.append(curr_row)
         return grid
 
-    def _can_fit_42(self) -> bool:
+    def can_fit_42(self) -> bool:
         """Check if maze dimensions are large enough to hold '42' pattern."""
         return self.height >= 6 and self.width >= 8
 
-    def _embed_42_pattern(self, type: str) -> set[tuple[int, int]]:
+    def _embed_42_pattern(self, pattern: str) -> set[tuple[int, int]]:
         """Returns a set of coordinate tuples to reserve the '42' pattern
         spaces on the grid.
         """
         fixed_42_cells: set[tuple[int, int]] = set()
 
-        if not self._can_fit_42():
+        if not self.can_fit_42():
             return fixed_42_cells
 
         ft_start_row = 0
         ft_start_col = 0
         for r in range(5):
             for c in range(7):
-                if type == "all":
+                if pattern == "all":
                     if self.pattern_42[r][c] >= 0:
                         fixed_42_cells.add((ft_start_row + r,
                                             ft_start_col + c))
-                elif type == "full":
+                elif pattern == "full":
                     if self.pattern_42[r][c] == 0:
                         fixed_42_cells.add((ft_start_row + r,
                                             ft_start_col + c))
@@ -110,13 +110,13 @@ class MazeGenBase(ABC):
         this removes the corresponding wall in the current cell.
         """
         if (row, col) not in self.fixed_cells:
-            if col >= 0:
+            if col > 0:
                 if self.grid[row][col-1] & 2 == 0:
                     self.grid[row][col] &= ~8
             if col + 1 < self.width:
                 if self.grid[row][col+1] & 8 == 0:
                     self.grid[row][col] &= ~2
-            if row >= 0:
+            if row > 0:
                 if self.grid[row-1][col] & 4 == 0:
                     self.grid[row][col] &= ~1
             if row + 1 < self.height:
@@ -124,17 +124,43 @@ class MazeGenBase(ABC):
                     self.grid[row][col] &= ~4
 
     def _non_perfect(self) -> None:
-        """Introduces loops into the maze by destroying walls at a random
-        number of locations.
+        """Introduces loops into the maze by removing walls at random
+        locations, keeping both sides of every removed wall in sync.
         """
-        if not self.perfect_map:
-            nbr_break = random.randint(5, 20)
-            for _ in range(nbr_break):
-                random_row = random.randint(1, self.height - 2)
-                random_col = random.randint(1, self.width - 2)
-                if (random_row - 1, random_col - 1) not in self.fixed_cells:
-                    rnd = 15
-                    self.grid[random_row][random_col] &= ~rnd
+        # bit -> (row_offset, col_offset, matching bit on the neighbour)
+        wall_links = {
+            1: (-1, 0, 4),   # N wall  <-> neighbour's S wall
+            2: (0, 1, 8),    # E wall  <-> neighbour's W wall
+            4: (1, 0, 1),    # S wall  <-> neighbour's N wall
+            8: (0, -1, 2),   # W wall  <-> neighbour's E wall
+        }
+
+        def _break_wall(row: int, col: int, bit: int) -> None:
+            """Clears 'bit' on (row, col) and the matching bit on the
+            neighbour across that wall. Does nothing if there is no
+            neighbour on that side, or if the neighbour is part of the
+            '42' pattern.
+            """
+            row_offset, col_offset, opposite_bit = wall_links[bit]
+            n_row, n_col = row + row_offset, col + col_offset
+
+            if not (0 <= n_row < self.height and 0 <= n_col < self.width):
+                return  # this side faces the maze boundary - leave it walled
+            if (n_row, n_col) in self.fixed_cells:
+                return  # don't carve a hole into the '42' pattern
+
+            self.grid[row][col] &= ~bit
+            self.grid[n_row][n_col] &= ~opposite_bit
+
+        nbr_break = max(5, (self.width * self.height) // 25)
+        for _ in range(nbr_break):
+            random_row = random.randint(1, self.height)
+            random_col = random.randint(1, self.width)
+            r, c = random_row - 1, random_col - 1
+
+            if (r, c) not in self.fixed_cells:
+                for bit in wall_links:
+                    _break_wall(r, c, bit)
 
     def _remove_excessive_rooms(self) -> None:
         """Scans in a 3x3 window and adds a wall if a blank 3x3 space is

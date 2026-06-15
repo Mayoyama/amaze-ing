@@ -4,7 +4,7 @@ import sys
 
 @dataclass
 class MapData:
-    """Dataclass that holds acts as a container for the parsed data"""
+    """Dataclass that acts as a container for the parsed data."""
     width: int
     height: int
     entry: tuple[int, int]
@@ -13,15 +13,16 @@ class MapData:
     perfect: bool
     seed: int
     bonus: bool
+    verbose: bool
 
 
 def parse_config() -> MapData:
     """Parses information from the config file in a strict order-based
-    manner
-"""
+    manner.
+    """
     def found_value(param: str, value: str) -> int:
         """Validates that the string is numeric, and if so, returns it
-        as an integer
+        as an integer.
         """
         if (value.isnumeric()):
             return (int(value))
@@ -32,7 +33,7 @@ def parse_config() -> MapData:
 
     def inputfile() -> str:
         """Verifies that the correct number of arguments are received from
-        the command prompt
+        the command prompt.
         """
         if len(sys.argv) != 2:
             print("You should give one argument to the program. Example: "
@@ -47,10 +48,8 @@ def parse_config() -> MapData:
     except (FileNotFoundError, PermissionError, IsADirectoryError) as e:
         print(f"Cannot access config file: {e}", file=sys.stderr)
         sys.exit(1)
-    """
-    Initialise tuples to reassure linters that they will have a value
-    by the end of the if/elif blocks
-    """
+    # Initialise tuples to reassure linters that they will have a value
+    # by the end of the if/elif blocks
     entry: tuple[int, int] = (0, 0)
     exit: tuple[int, int] = (0, 0)
     nbr_line = 0
@@ -120,10 +119,21 @@ def parse_config() -> MapData:
                 bonus = False
             else:
                 raise ValueError("Bonus: must be either 'True' or 'False'")
+            nbr_line += 1
+
+        elif (line.startswith("VERBOSE=") and nbr_line == 8):
+            if (line[8:].strip() == "True"):
+                verbose = True
+            elif (line[8:].strip() == "False"):
+                verbose = False
+            else:
+                raise ValueError("VERBOSE: must be either 'True' or 'False'")
+            nbr_line += 1
+
         else:
             raise ValueError("Invalid, empty, or out-of-order "
                              "configuration field(s)")
-    if nbr_line != 7:
+    if nbr_line != 9:
         raise ValueError("Invalid, empty, or out-of-order configuration "
                          "field(s)")
 
@@ -132,8 +142,8 @@ def parse_config() -> MapData:
         raise ValueError("Width and height must be positive, "
                          "and greater than 2")
 
-    # Set maximum allowed dimensions to 50
-    if width > 100 or height > 75:
+    # Set maximum allowed dimensions to 75
+    if width > 75 or height > 75:
         raise ValueError("Maximum size of map is 75")
 
     # Validate that ENTRY is inside map bounds
@@ -149,4 +159,4 @@ def parse_config() -> MapData:
         raise ValueError("EXIT and ENTER should be different points")
 
     return MapData(width, height, entry, exit, output_file,
-                   perfect, seed, bonus)
+                   perfect, seed, bonus, verbose)

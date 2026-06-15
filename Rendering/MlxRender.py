@@ -36,6 +36,9 @@ class Renderer:
         _ui: Shared UI state containing colors and display options.
     """
 
+    SPRITE_OFFSET_X = 8
+    SPRITE_OFFSET_Y = 7
+
     def __init__(self, grid: list[list[int]], map_data: MapData,
                  fixed_cells: set[tuple[int, int]], data: memoryview,
                  img_w: int, img_h: int, size_line: int, cell_size: int,
@@ -49,7 +52,7 @@ class Renderer:
         self._map_data = map_data
         self._margin = self._cell_size
 
-        self._sprite_data = None
+        self._sprite_data: Any = None
         self._sprite_size_line = 0
         self._sprite_width = 0
         self._sprite_height = 0
@@ -76,15 +79,42 @@ class Renderer:
         """Returns True/False whether the cell has a west wall"""
         return bool(cell & 8)
 
-    def _cell_to_pixel(self, r: int, c: int) -> tuple[int, int]:
-        x = self._margin + (c * self._cell_size)
-        y = self._margin + (r * self._cell_size)
-        return x, y
+    def update_grid(self, grid: list[list[int]],
+                    fixed_cells: set[tuple[int, int]]) -> None:
+        """Replaces the maze grid and '42' pattern cells being rendered.
+
+        Called after the maze has been regenerated so that subsequent
+        render calls draw the new layout.
+
+        Args:
+            grid: The new maze grid to render.
+            fixed_cells: The new set of '42' pattern cell coordinates.
+        """
+        self._grid = grid
+        self._fixed_cells = fixed_cells
 
     def clear_map(self) -> None:
+        """Fills the entire image buffer with black, erasing any
+        previously rendered maze, path, or sprite before a redraw.
+        """
         for y in range(self._image_height):
             for x in range(self._image_width):
                 self._put_pixel(x, y, (0, 0, 0))
+
+    def _cell_to_pixel(self, r: int, c: int) -> tuple[int, int]:
+        """Converts a grid cell's (row, col) to its top-left pixel position.
+
+        Args:
+            r: The cell's row index.
+            c: The cell's column index.
+
+        Returns:
+            The (x, y) pixel coordinates of the cell's top-left corner,
+            accounting for the image margin and cell size.
+        """
+        x = self._margin + (c * self._cell_size)
+        y = self._margin + (r * self._cell_size)
+        return x, y
 
     def set_sprite(self, sprite_data: Any, sprite_size_line: int,
                    sprite_width: int, sprite_height: int) -> None:
@@ -95,26 +125,33 @@ class Renderer:
         self._sprite_height = sprite_height
 
     def draw_sprite(self, sprite_pos: tuple[int, int]) -> None:
-        """Draw the sprite PNG at the specified maze cell."""
+        """Draws the sprite image onto the maze at the given cell.
+
+        Converts 'sprite_pos' to its pixel location via '_cell_to_pixel',
+        then copies the sprite's pixels onto the image buffer starting at
+        that position, using each pixel's alpha channel to blend it with
+        the maze underneath so transparent areas of the sprite don't
+        overwrite the maze.
+        """
         if not self._sprite_data or not sprite_pos:
             return
 
         r, c = sprite_pos
 
         sprite_x, sprite_y = self._cell_to_pixel(r, c)
-        sprite_x -= 8
-        sprite_y -= 7
+        sprite_x -= self.SPRITE_OFFSET_X
+        sprite_y -= self.SPRITE_OFFSET_Y
 
         for y in range(self._sprite_height):
             for x in range(self._sprite_width):
                 src_offset = (y * self._sprite_size_line) + (x * 4)
 
-                b = self._sprite_data[src_offset + 0]
-                g = self._sprite_data[src_offset + 1]
-                r = self._sprite_data[src_offset + 2]
-                a = self._sprite_data[src_offset + 3]
+                blue = self._sprite_data[src_offset + 0]
+                green = self._sprite_data[src_offset + 1]
+                red = self._sprite_data[src_offset + 2]
+                alpha = self._sprite_data[src_offset + 3]
 
-                if a == 0:
+                if alpha == 0:
                     continue
 
                 dest_x = sprite_x + x
@@ -125,9 +162,9 @@ class Renderer:
                  and 0 <= dest_y < self._image_height):
                     offset = (dest_y * self._size_line) + (dest_x * 4)
 
-                    self._data[offset + 0] = b
-                    self._data[offset + 1] = g
-                    self._data[offset + 2] = r
+                    self._data[offset + 0] = blue
+                    self._data[offset + 1] = green
+                    self._data[offset + 2] = red
                     self._data[offset + 3] = 255
 
     def _put_pixel(self, x: int, y: int, color: tuple[int, int, int]) -> None:

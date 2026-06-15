@@ -136,6 +136,8 @@ The configuration file passed as an argument must contain the following variable
 
     - BONUS: Set to True or False to enable or disable bonus maze.
 
+    - VERBOSE: Set to True or False. When True, the program prints extra map-analysis info (alternate path search results) to the terminal after each maze generation.
+
 Note: You can include comments in the configuration file; blank lines and lines starting with # will be ignored.
 
 ### Complete Template
@@ -147,8 +149,9 @@ ENTRY=10,10
 EXIT=15,15
 OUTPUT_FILE=output_maze.txt
 PERFECT=True
-SEED=45
+SEED=42
 BONUS=False
+VERBOSE=False
 ```
 
 ### Constraints & Validation Rules
@@ -165,9 +168,11 @@ To ensure stability, proper rendering performance, and logical consistency, the 
 
 * **Special Rules:** 
   * **SEED**: Must be a valid **positive** integer. Providing the same seed ensures identical maze generation for testing and reproducibility.
-  * **PERFECT & BONUS**: These flags must strictly be set to either `True` or `False`.
+  * **PERFECT, BONUS & VERBOSE**: These flags must strictly be set to either `True` or `False`.
 
 NB: If any values in the config file are invalid or left blank, an appropriate error message will be provided, and the program will terminate.
+
+* **"42" Pattern:** Requires a minimum map size of 8x6. If the configured WIDTH/HEIGHT is smaller, the pattern is omitted and an error message is printed to the console.
 
 [▲ Back to Top](#table-of-contents)
 
@@ -195,6 +200,9 @@ BFS is a graph traversal algorithm that explores all possible positions in a maz
 
 In this project, BFS keeps track of visited cells and records the previous cell for each step, allowing the final path to be reconstructed by backtracking from the exit to the entry once the search completes
 
+### Map Analysis Algorithm
+
+Like the BFS solver, `find_alt_paths` searches for routes between ENTRY and EXIT, but uses **DFS** to enumerate distinct simple paths (paths that never revisit a cell), stopping once 2 are found. If only one exists, the maze is confirmed perfect; if a second is found, the maze has loops. On large non-perfect mazes the number of possible paths grows very quickly, which is why this search is size-capped (see Verbose Mode above).
 
 ### Chosen Maze Generation Algorithm for Bonus
 
@@ -240,10 +248,15 @@ When rendering the maze using the MiniLibX (MLX) graphical interface, you can in
 * **Key [8]**: Generate a new **non-perfect map** using the bonus algorithm.
 * **Key [ESC]**: Safely exit the program and close the graphical window.
 
-Export of maze + solution path to text file:
+### Export of maze + solution path to text file:
 
 In addition to the above, upon each generation of a new maze, a file output_maze.txt will be generated and populated with a hex representation of the cell values, the start and end coordinates and the directions of how to move between the start and end points.
 
+### Map Analysis (Verbose Mode)
+
+When `VERBOSE=True`, every time a maze is generated (on startup and after pressing keys 5-8) the program searches for alternate paths between ENTRY and EXIT and prints a short summary to the terminal — either confirming the maze is "perfect" (only one possible path), or listing the alternate paths found.
+
+Because this search can take a long time on large non-perfect mazes with higher numbers of loops, it is skipped for non-perfect maps larger than 20x20, printing "Feature unavailable for maps larger than 20x20" instead. Set `VERBOSE=False` to skip this analysis entirely.
 
 [▲ Back to Top](#table-of-contents)
 
@@ -254,7 +267,8 @@ In addition to the above, upon each generation of a new maze, a file output_maze
 ### Reusable Components
 - MazeSolver (BFS pathfinding) - Requires a populated maze grid (`list[list[int]]`) and map data
 - Renderer (visual layer) - Limited reusability as it requires various external data currently provided by `App()` to function fully, but could be adapted to render similar objects in the future.
-- ExportMap (export utility) - Requires a maze (from a mazegenerator), map data and a string with the path
+- export_map (export utility) - Requires a maze (from a mazegenerator), map data and a string with the path
+- find_alt_paths (map analysis utility) - Requires a maze grid (`list[list[int]]`) and the entry/exit coordinates. Returns the number of distinct paths found and a list of their direction strings.
 - MapData (configuration model) - Requires the following data to be either parsed from a config file, using `parse_config()` or instantiated separately.
 ```ini
 width: int
@@ -265,6 +279,7 @@ output_file: str
 perfect: bool
 seed: int
 bonus: bool
+verbose: bool
 ```
 
 #### MazeGenerator / MazeGeneratorBonus Reusability
@@ -306,7 +321,7 @@ mazeGen = MazeGenerator(map_data)
 
 An instance of the MapData dataclass type object can be instantiated as:
 ```ini
-map_data = MapData(width, height, entry, exit, output_file, perfect, seed, bonus)
+map_data = MapData(width, height, entry, exit, output_file, perfect, seed, bonus, verbose)
 ```
 Additional parameters can be added or removed by adjusting the MapData dataclass
 ```ini
@@ -321,6 +336,7 @@ class MapData:
     perfect: bool
     seed: int
     bonus: bool
+	verbose: bool
     NEW_PARAMETER: {data type}
 ```
 
@@ -371,6 +387,55 @@ def gen_map(self) -> list[list[int]]:
 
 This grid could then be used with utilities such as ExportMap and MazeSolver, and then rendered to the screen using Renderer
 
+Standalone Package (mazegen)
+
+To satisfy the project's reusability requirements, the core maze generation and solving logic (MapData, MazeGenerator, MazeGeneratorBonus, MazeSolver) is also packaged as a separate, pip-installable module called mazegen. It is fully independent of the MLX rendering code, and is built
+from the mazegen/ directory and pyproject.toml at the root of this repository using python -m build, producing mazegen-1.0.0-py3-none-any.whl and mazegen-1.0.0.tar.gz (also kept at the repo root).
+
+**Installation**
+
+bashpip install mazegen-1.0.0-py3-none-any.whl
+
+**Basic usage**
+
+python
+from mazegen import MapData, MazeGenerator, MazeSolver
+
+# 1. Describe the maze you want
+data = MapData(
+    width=20, height=20,
+    entry=(0, 0), exit=(19, 19),
+    perfect=True, seed=42,
+)
+
+# 2. Generate it
+generator = MazeGenerator(data)
+grid = generator.gen_map()
+
+# 3. Solve it
+solver = MazeSolver(grid, data)
+path_cells, path_directions = solver.generate_final_path()
+
+print(path_directions)  # e.g. "EESSWWN..."
+
+**Custom parameters**
+
+width / height: grid dimensions in cells. Must be at least 8x6 for the "42" pattern to be drawn - smaller mazes silently omit it (check with generator.can_fit_42()).
+entry / exit: (row, col) tuples marking the start and end cells, within the grid and not inside the "42" pattern.
+perfect: True for exactly one path between any two cells, False for extra loops/multiple paths.
+seed: any integer - the same seed and parameters always produce the same maze.
+output_file, bonus, verbose: not used by this package; kept for compatibility with the main app's config format and default automatically.
+
+Use MazeGeneratorBonus instead of MazeGenerator for the Sidewinder-style algorithm - it has the same constructor and gen_map() interface.
+
+**Accessing the maze structure and a solution**
+
+generator.gen_map() returns a list[list[int]] using the same 4-bit N/E/S/W wall bitmask described in the Maze Bitmask Reference Key above (1 = wall closed, 0 = wall open). Note this is not the same format as output_maze.txt.
+
+MazeSolver(grid, data).generate_final_path() returns (path_cells, path_directions): the ordered list of (row, col) cells from entry to exit, and a string of "N"/"E"/"S"/"W" steps describing that path (e.g. "ESSWN").
+
+Full usage details and the bitmask table are also documented in mazegen/README.md, which is included as the package's own README.
+
 
 ### Extension Guidelines
 - Add new generators by matching grid format + bitmask encoding
@@ -398,13 +463,15 @@ This grid could then be used with utilities such as ExportMap and MazeSolver, an
 ### AI Usage & Attributions
 * **Tasks Delegated to AI:** 
 	- Designing the format of the README
-	- Providing a breakdown of the functions of the MLX wrapper 
+	- Providing a breakdown of the functions of the MLX wrapper
+	- Brainstorming ideas for the find_alt_paths algorithm (DFS vs BFS, iterative vs recursive)
 	- Debugging MLX related errors
 	- Gathering information relating to things such as different algorithms for maze generation and solving, bit operations, math related to rendering pixels to the screen with MLX etc
 	
 * **Project Areas Impacted:** 
 	- README.md
 	- Assistance in understanding how to render the PNG sprite to the screen and animation loops in mlx_render.py
+	- find_alt_paths (map analysis utility)
 
 [▲ Back to Top](#table-of-contents)
 
@@ -415,12 +482,13 @@ This grid could then be used with utilities such as ExportMap and MazeSolver, an
 ### Team Roles & Responsibilities
 * **speterse:**
 
-  Team leader. Creation of the App() class and the overall structure of how the program would run. Handled the entirety of the graphical rendering using the MiniLibX (MLX) library. He developed the primary maze-generation algorithm as well as the pathfinding algorithm used to solve for the optimal route. Additionally, he implemented all real-time interactive features. One of his most innovative contributions was engineering the path animation featuring a small fish that automatically scales its size based on the dimensions of the maze cells. He also took charge of code readability. A fantastic teammate all around!
+  Team leader. Creation of the App() class and the overall structure of how the program would run. Handled the entirety of the graphical rendering using the MiniLibX (MLX) library. He developed the primary maze-generation algorithm as well as the pathfinding  and find_alt_paths algorithms used to solve for the optimal route. Additionally, he implemented all real-time interactive features. One of his most innovative contributions was engineering the path animation featuring a small fish that automatically scales its size based on the dimensions of the maze cells. He also took charge of code readability. A fantastic teammate all around!
 
 * **ikryvenk:**
 
   Awesome partner. Spearheaded the robust configuration file parser, ensuring all inputs are validated against project constraints. He implemented the bonus maze-generation algorithm and wrote the core post-processing logic required to transform perfect mazes into non-perfect ones by safely introducing loops. Took charge of refactoring parent-child relationshiips of the maze generation logic.
 
+  NB: Various other tasks were performed collaboratively, and each task was cross-checked by the other person.
 
 ### Project Planning & Evolution
 
