@@ -135,6 +135,28 @@ class MazeGenBase(ABC):
             8: (0, -1, 2),   # W wall  <-> neighbour's E wall
         }
 
+        def _clear_all_walls_around_point(point: tuple[int, int]) -> None:
+            """Removes all internal walls surrounding a specific (row, col) point.
+            
+            Ensures that maze boundaries and '42' pattern cells remain completely untouched,
+            and synchronizes the wall states of adjacent neighbors.
+            """
+
+            row, col = point
+
+            for bit, (row_offset, col_offset, opposite_bit) in wall_links.items():
+                n_row = row + row_offset
+                n_col = col + col_offset
+
+                if not (0 <= n_row < self.height and 0 <= n_col < self.width):
+                    continue 
+
+                if (n_row, n_col) in self.fixed_cells:
+                    continue
+
+                self.grid[row][col] &= ~bit
+                self.grid[n_row][n_col] &= ~opposite_bit
+
         def _break_wall(row: int, col: int, bit: int) -> None:
             """Clears 'bit' on (row, col) and the matching bit on the
             neighbour across that wall. Does nothing if there is no
@@ -149,7 +171,7 @@ class MazeGenBase(ABC):
             if (n_row, n_col) in self.fixed_cells:
                 return  # don't carve a hole into the '42' pattern
 
-            self.grid[row][col] &= ~bit
+            self.grid[row][col] &= ~bit 
             self.grid[n_row][n_col] &= ~opposite_bit
 
         nbr_break = max(5, (self.width * self.height) // 25)
@@ -161,6 +183,8 @@ class MazeGenBase(ABC):
             if (r, c) not in self.fixed_cells:
                 for bit in wall_links:
                     _break_wall(r, c, bit)
+        _clear_all_walls_around_point(self.start_point)
+        _clear_all_walls_around_point(self.end_point)
 
     def _remove_excessive_rooms(self) -> None:
         """Scans in a 3x3 window and adds a wall if a blank 3x3 space is

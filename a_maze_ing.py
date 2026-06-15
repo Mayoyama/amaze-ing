@@ -9,6 +9,8 @@ from Rendering.MlxRender import Renderer, UI_state
 from Utils.MazeSolver import MazeSolver
 from MapData import parse_config
 from Utils.Utils import export_map, find_alt_paths
+import signal
+import sys
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,8 @@ class App:
         _ui: Shared UI state and display settings.
     """
     def __init__(self) -> None:
+        signal.signal(signal.SIGTSTP, self._handle_termination)
+        signal.signal(signal.SIGINT, self._handle_termination)
         self._map_data = parse_config()
         self._mazeGen = MazeGenerator(self._map_data)
         self._mazeGenBonus = MazeGeneratorBonus(self._map_data)
@@ -63,6 +67,12 @@ class App:
         self._compute_window_size()
         self._init_mlx_window()
         self._init_renderer()
+
+    def _handle_termination(self, signum, frame) -> None:
+        self._mlx.mlx_loop_exit(self._mlx_ptr)
+        sig_name = "Ctrl+C" if signum == signal.SIGINT else "Ctrl+Z"
+        print(f"\n{sig_name} was detected! Terminating program.")
+        os._exit(0)
 
     def _generate_maze(self) -> None:
         """Generates the maze grid (DFS or sidewinder bonus, per config)
@@ -268,6 +278,7 @@ class App:
         """Registers the key-press handler mapping keys 1-8 and ESC to
         display toggles, maze regeneration, and program exit.
         """
+
         def key_handler(keycode: int, param: Any) -> None:
             """Handles one key press: toggles display options, regenerates
             the maze, or exits, then redraws the map.
@@ -325,6 +336,7 @@ class App:
             """Advances the sprite one cell along the solution path every
             second tick, while animation is enabled.
             """
+
             if not self._ui.animate_sprite:
                 return
 
@@ -340,6 +352,7 @@ class App:
                     self._sprite_pos = self._path_cells[self._sprite_index]
 
                     self._redraw_map()
+
 
         self._mlx.mlx_loop_hook(self._mlx_ptr, update_img, None)
 
