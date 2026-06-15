@@ -228,7 +228,7 @@ Mlx is not a native module/library for python. It is actually a **C-language lib
 ```ini
 a_maze_ing.py:3: error: Skipping analyzing "mlx": module is installed, but missing library stubs or py.typed marker  [import-untyped]
 ```
-Since modifying the module and wrapper is outside the scope of this project and not feasible with a prepackaged .whl, we decided to handle this mypy error through a mypy config rule in the `pyproject.toml`.
+Since modifying the module and wrapper is outside the scope of this project and not feasible with a prepackaged .whl, we decided to handle this mypy error by using the inline comment # type: ignore[import-untyped], which only specifically triggers for imported modules without typing.
 
 [▲ Back to Top](#table-of-contents)
 

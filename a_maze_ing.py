@@ -1,6 +1,6 @@
 import os
 from random import choice
-from mlx import Mlx
+from mlx import Mlx  # type: ignore[import-untyped]
 from dataclasses import dataclass
 from typing import cast, Any
 from MazeGenerator.MazeGenerator import MazeGenerator
