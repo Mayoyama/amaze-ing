@@ -8,6 +8,7 @@ utilized across different maze generation algorithms.
 import random
 from MapData import MapData
 from abc import ABC, abstractmethod
+from Utils.PathUtils import find_path, count_paths
 
 
 class MazeGenBase(ABC):
@@ -20,16 +21,18 @@ class MazeGenBase(ABC):
             number generator, ensuring reproducible maze layouts.
         grid (list[list[int]]): The internal 2D matrix representing
             the maze layout.
-        pattern_42 (list[list[int]]): The template for the '42' pattern
+        _pattern_42 (list[list[int]]): The template for the '42' pattern
             that must appear in the generated map.
         start_point (tuple[int, int]): Row and column coordinates for
             the maze entrance.
         end_point (tuple[int, int]): Row and column coordinates for the
             maze exit.
-        perfect_map (bool): True if the maze is a perfect maze (no loops),
+        _perfect_map (bool): True if the maze is a perfect maze (no loops),
             False otherwise.
         fixed_cells (set[tuple[int, int]]): Grid coordinates reserved by
             the '42' pattern.
+        _wall_links (dict): Maps each wall bit to its (row_offset, col_offset,
+            opposite_bit) neighbour data.
     """
     def __init__(self, data: MapData, pattern_42: list[list[int]]) -> None:
         """Initializes maze config and instantiates a solid wall grid."""
@@ -39,9 +42,16 @@ class MazeGenBase(ABC):
         self.grid = self._initialize_empty_grid()
         self.start_point = data.entry
         self.end_point = data.exit
-        self.perfect_map = data.perfect
-        self.pattern_42 = pattern_42
+        self._perfect_map = data.perfect
+        self._pattern_42 = pattern_42
         self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern("all")
+        # bit -> (row_offset, col_offset, matching bit on the neighbour)
+        self._wall_links = {
+            1: (-1, 0, 4),   # N wall  <-> neighbour's S wall
+            2: (0, 1, 8),    # E wall  <-> neighbour's W wall
+            4: (1, 0, 1),    # S wall  <-> neighbour's N wall
+            8: (0, -1, 2),   # W wall  <-> neighbour's E wall
+        }
 
     @staticmethod
     def _convert_rc_to_xy(r: int, c: int) -> tuple[int, int]:
@@ -80,11 +90,11 @@ class MazeGenBase(ABC):
         for r in range(5):
             for c in range(7):
                 if pattern == "all":
-                    if self.pattern_42[r][c] >= 0:
+                    if self._pattern_42[r][c] >= 0:
                         fixed_42_cells.add((ft_start_row + r,
                                             ft_start_col + c))
                 elif pattern == "full":
-                    if self.pattern_42[r][c] == 0:
+                    if self._pattern_42[r][c] == 0:
                         fixed_42_cells.add((ft_start_row + r,
                                             ft_start_col + c))
 
@@ -123,56 +133,27 @@ class MazeGenBase(ABC):
                 if self.grid[row+1][col] & 1 == 0:
                     self.grid[row][col] &= ~4
 
+    def _break_wall(self, r: int, c: int, wall_bit: int) -> None:
+        """Clears 'bit' on (row, col) and the matching bit on the
+        neighbour across that wall. Does nothing if there is no
+        neighbour on that side, or if the neighbour is part of the
+        '42' pattern.
+        """
+        row_offset, col_offset, opposite_bit = self._wall_links[wall_bit]
+        n_row, n_col = r + row_offset, c + col_offset
+
+        if not (0 <= n_row < self.height and 0 <= n_col < self.width):
+            return  # this side faces the maze boundary - leave it walled
+        if (n_row, n_col) in self.fixed_cells:
+            return  # don't carve a hole into the '42' pattern
+
+        self.grid[r][c] &= ~wall_bit
+        self.grid[n_row][n_col] &= ~opposite_bit
+
     def _non_perfect(self) -> None:
         """Introduces loops into the maze by removing walls at random
         locations, keeping both sides of every removed wall in sync.
         """
-        # bit -> (row_offset, col_offset, matching bit on the neighbour)
-        wall_links = {
-            1: (-1, 0, 4),   # N wall  <-> neighbour's S wall
-            2: (0, 1, 8),    # E wall  <-> neighbour's W wall
-            4: (1, 0, 1),    # S wall  <-> neighbour's N wall
-            8: (0, -1, 2),   # W wall  <-> neighbour's E wall
-        }
-
-        def _clear_all_walls_around_point(point: tuple[int, int]) -> None:
-            """Removes all internal walls surrounding a specific (row, col) point.
-            
-            Ensures that maze boundaries and '42' pattern cells remain completely untouched,
-            and synchronizes the wall states of adjacent neighbors.
-            """
-
-            row, col = point
-
-            for bit, (row_offset, col_offset, opposite_bit) in wall_links.items():
-                n_row = row + row_offset
-                n_col = col + col_offset
-
-                if not (0 <= n_row < self.height and 0 <= n_col < self.width):
-                    continue 
-
-                if (n_row, n_col) in self.fixed_cells:
-                    continue
-
-                self.grid[row][col] &= ~bit
-                self.grid[n_row][n_col] &= ~opposite_bit
-
-        def _break_wall(row: int, col: int, bit: int) -> None:
-            """Clears 'bit' on (row, col) and the matching bit on the
-            neighbour across that wall. Does nothing if there is no
-            neighbour on that side, or if the neighbour is part of the
-            '42' pattern.
-            """
-            row_offset, col_offset, opposite_bit = wall_links[bit]
-            n_row, n_col = row + row_offset, col + col_offset
-
-            if not (0 <= n_row < self.height and 0 <= n_col < self.width):
-                return  # this side faces the maze boundary - leave it walled
-            if (n_row, n_col) in self.fixed_cells:
-                return  # don't carve a hole into the '42' pattern
-
-            self.grid[row][col] &= ~bit 
-            self.grid[n_row][n_col] &= ~opposite_bit
 
         nbr_break = max(5, (self.width * self.height) // 25)
         for _ in range(nbr_break):
@@ -181,10 +162,9 @@ class MazeGenBase(ABC):
             r, c = random_row - 1, random_col - 1
 
             if (r, c) not in self.fixed_cells:
-                for bit in wall_links:
-                    _break_wall(r, c, bit)
-        _clear_all_walls_around_point(self.start_point)
-        _clear_all_walls_around_point(self.end_point)
+                for bit in random.sample(list(self._wall_links),
+                                         random.randint(1, 3)):
+                    self._break_wall(r, c, bit)
 
     def _remove_excessive_rooms(self) -> None:
         """Scans in a 3x3 window and adds a wall if a blank 3x3 space is
@@ -226,6 +206,42 @@ class MazeGenBase(ABC):
                 if is_open_room:
                     self.grid[scan_r + 1][scan_c + 1] |= 1
                     self.grid[scan_r][scan_c + 1] |= 4
+
+    def _ensure_alt_path(self) -> None:
+        """Clears walls around entry/exit, then for small (< 100 squares)
+        non-perfect maps retries breaking path cells until a second route
+        exists.
+        """
+        for pt in [self.start_point, self.end_point]:
+            r, c = pt
+            for bit in self._wall_links:
+                self._break_wall(r, c, bit)
+
+        if self.width * self.height > 100:
+            return
+
+        tried: set[tuple[int, int]] = set()
+        for _ in range(15):
+            if count_paths(self.grid, self.start_point, self.end_point) >= 2:
+                return
+            path = find_path(self.grid, self.start_point, self.end_point)
+            if not path or len(path) < 3:
+                return
+            candidates = [
+                cell for cell in path[1:-1]
+                if cell not in self.fixed_cells and cell not in tried
+            ]
+            if not candidates:
+                return
+            tr, tc = random.choice(candidates)
+            tried.add((tr, tc))
+            for bit in self._wall_links:
+                self._break_wall(tr, tc, bit)
+            self._check_neighbors(tr, tc)
+            for dr, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
+                nr, nc = tr + dr, tc + dc
+                if 0 <= nr < self.height and 0 <= nc < self.width:
+                    self._check_neighbors(nr, nc)
 
     @abstractmethod
     def gen_map(self) -> list[list[int]]:

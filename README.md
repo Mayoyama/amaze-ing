@@ -136,8 +136,6 @@ The configuration file passed as an argument must contain the following variable
 
     - BONUS: Set to True or False to enable or disable bonus maze.
 
-    - VERBOSE: Set to True or False. When True, the program prints extra map-analysis info (alternate path search results) to the terminal after each maze generation.
-
 Note: You can include comments in the configuration file; blank lines and lines starting with # will be ignored.
 
 ### Complete Template
@@ -151,15 +149,14 @@ OUTPUT_FILE=output_maze.txt
 PERFECT=True
 SEED=42
 BONUS=False
-VERBOSE=False
 ```
 
 ### Constraints & Validation Rules
 
 To ensure stability, proper rendering performance, and logical consistency, the configuration file must adhere to the following rules:
 
-* **Dimensions:**  Width and height must be integers between `2` and `75`.
-    * *Reasoning:*  While it is possible to render maps larger than 75x75, setting dimensions higher than 75 significantly degrades performance during the graphical MiniLibX (MLX) animation, as the entire maze grid is redrawn on every single frame.
+* **Dimensions:**  Width and height must be integers between `2` and `100`.
+    * *Reasoning:*  While it is possible to render maps larger than 100x100, setting dimensions higher than 100 may significantly degrades performance, or cause the window size to become too big to display correctly on the monitor.
 
 * **Coordinates:** 
   * The entry and exit points must be located strictly within the bounds of the map.
@@ -168,7 +165,7 @@ To ensure stability, proper rendering performance, and logical consistency, the 
 
 * **Special Rules:** 
   * **SEED**: Must be a valid **positive** integer. Providing the same seed ensures identical maze generation for testing and reproducibility.
-  * **PERFECT, BONUS & VERBOSE**: These flags must strictly be set to either `True` or `False`.
+  * **PERFECT, BONUS**: These flags must strictly be set to either `True` or `False`.
 
 NB: If any values in the config file are invalid or left blank, an appropriate error message will be provided, and the program will terminate.
 
@@ -200,10 +197,6 @@ BFS is a graph traversal algorithm that explores all possible positions in a maz
 
 In this project, BFS keeps track of visited cells and records the previous cell for each step, allowing the final path to be reconstructed by backtracking from the exit to the entry once the search completes
 
-### Map Analysis Algorithm
-
-Like the BFS solver, `find_alt_paths` searches for routes between ENTRY and EXIT, but uses **DFS** to enumerate distinct simple paths (paths that never revisit a cell), stopping once 2 are found. If only one exists, the maze is confirmed perfect; if a second is found, the maze has loops. On large non-perfect mazes the number of possible paths grows very quickly, which is why this search is size-capped (see Verbose Mode above).
-
 ### Chosen Maze Generation Algorithm for Bonus
 
 For the bonus algorithm, we implemented a modified variation of the **Sidewinder** algorithm. The generation process iterates through the grid row by row from top to bottom, and from right to left. For each individual cell, the algorithm makes a randomized decision on whether to destroy the eastern (right) wall or the southern (bottom) wall. As it processes each cell, it actively checks the state of its neighbors and merges them accordingly into sets. 
@@ -220,7 +213,33 @@ A distinct structural feature (and limitation) of this algorithm is its inherent
 
 ### Non-perfect map
 
-Both of our algorithms create a perfect map. So for the non-perfect map we destroy some of the cells. `Random.randint` is used to select a predetermined number of cells to destroy (ranging from 5 to 15). Care is also taken to ensure the neighbouring cell's wall integrity is maintained. We also created a protective barrier around the "42" pattern to ensure it is not affected by the process.
+Both algorithms produce a perfect maze by default. To create a non-perfect map, a post-processing step randomly removes walls throughout the grid. The number of walls removed scales with map size — `max(5, width × height ÷ 25)` — so larger maps receive proportionally more openings. Wall removal always keeps both sides of each broken wall in sync, and the "42" pattern cells are fully protected throughout.
+
+After wall removal, a second pass ensures the entry and exit remain accessible and attempts to guarantee at least two distinct routes exist between them, up to the geometric constraints described below.
+
+#### Non-Perfect Map Behaviour
+
+Non-perfect maps introduce loops by randomly removing walls, guaranteeing multiple 
+routes in the vast majority of cases. However, the number of distinct paths between 
+ENTRY and EXIT is ultimately constrained by the physical structure of the maze:
+
+- **The "42" pattern** occupies a fixed 5×7 region that cannot be carved through. 
+  On narrower maps this creates natural corridors — for example, on an 8-wide map 
+  the pattern reaches column 6, leaving a single-cell passage alongside it. Entry 
+  and exit points placed within such a corridor will always share the same corridor 
+  regardless of which other walls are removed.
+
+- **Seed and placement interact:** Because wall-breaking is seed-driven, certain 
+  combinations of seed, map size, and ENTRY/EXIT coordinates may produce fewer 
+  loops near the chosen endpoints even when loops exist elsewhere in the map.
+
+- **Map size:** On maps of 10×10 or smaller, the limited number of cells means 
+  fewer possible routes exist by definition.
+
+In all of these cases the maze is fully valid and the solver always finds the 
+shortest path. Whether one route or several exist between two specific points 
+is a natural consequence of geometry, not something the generator can always 
+override.
 
 ### Issue regarding linters and the MiniLibX python wrapper
 
@@ -252,12 +271,6 @@ When rendering the maze using the MiniLibX (MLX) graphical interface, you can in
 
 In addition to the above, upon each generation of a new maze, a file output_maze.txt will be generated and populated with a hex representation of the cell values, the start and end coordinates and the directions of how to move between the start and end points.
 
-### Map Analysis (Verbose Mode)
-
-When `VERBOSE=True`, every time a maze is generated (on startup and after pressing keys 5-8) the program searches for alternate paths between ENTRY and EXIT and prints a short summary to the terminal — either confirming the maze is "perfect" (only one possible path), or listing the alternate paths found.
-
-Because this search can take a long time on large non-perfect mazes with higher numbers of loops, it is skipped for non-perfect maps larger than 20x20, printing "Feature unavailable for maps larger than 20x20" instead. Set `VERBOSE=False` to skip this analysis entirely.
-
 [▲ Back to Top](#table-of-contents)
 
 ---
@@ -268,7 +281,6 @@ Because this search can take a long time on large non-perfect mazes with higher 
 - MazeSolver (BFS pathfinding) - Requires a populated maze grid (`list[list[int]]`) and map data
 - Renderer (visual layer) - Limited reusability as it requires various external data currently provided by `App()` to function fully, but could be adapted to render similar objects in the future.
 - export_map (export utility) - Requires a maze (from a mazegenerator), map data and a string with the path
-- find_alt_paths (map analysis utility) - Requires a maze grid (`list[list[int]]`) and the entry/exit coordinates. Returns the number of distinct paths found and a list of their direction strings.
 - MapData (configuration model) - Requires the following data to be either parsed from a config file, using `parse_config()` or instantiated separately.
 ```ini
 width: int
@@ -279,7 +291,6 @@ output_file: str
 perfect: bool
 seed: int
 bonus: bool
-verbose: bool
 ```
 
 #### MazeGenerator / MazeGeneratorBonus Reusability
@@ -288,10 +299,10 @@ In this project, the MazeGenerator code was designed modularly, in way that it c
 
 To instantiate the primary DFS-based algorithm, the following are required:
 - Maze data - outlined above
-- pattern_42: `list[list[int]]` - this is a customizable pattern that will be embedded into the maze. 
+- _pattern_42: `list[list[int]]` - this is a customizable pattern that will be embedded into the maze. 
 ```ini
 DFS example:
-    pattern_42 = [
+    _pattern_42 = [
         [1, -1, -1, -1, 1, 1, 1],    # Row 0: █ . . . █ █ █
         [1, -1, 1, -1, -1, -1, 1],   # Row 1: █ . █ . . . █
         [1, 1, 1, -1, 1, 1, 1],      # Row 2: █ █ █ . █ █ █
@@ -300,7 +311,7 @@ DFS example:
     ]
 
 Sidewinder example:
-    pattern_42 = [
+    _pattern_42 = [
         [0, 6, 10, 12, 0, 0, 0],     # Row 0: █ . . . █ █ █
         [0, 1, 0, 7, 10, 8, 0],      # Row 1: █ . █ . . . █
         [0, 0, 0, 5, 0, 0, 0],       # Row 2: █ █ █ . █ █ █
@@ -308,7 +319,7 @@ Sidewinder example:
         [1, 5, 0, 5, 0, 0, 0],       # Row 4: . . █ . █ █ █
     ]
 ```
-As you can see, the pattern is completely flexible in how it is implemented, according to the needs of the individual maze algorithm. The pattern_42 should be set as a class variable before the \_\_init__ definition and should be initialised in the `super().__init__()`.
+As you can see, the pattern is completely flexible in how it is implemented, according to the needs of the individual maze algorithm. The \_pattern_42 should be set as a class variable before the \_\_init__ definition and should be initialised in the `super().__init__()`.
 
     def __init__(self, data: MapData) -> None:
         """Initializes maze config."""
@@ -321,7 +332,7 @@ mazeGen = MazeGenerator(map_data)
 
 An instance of the MapData dataclass type object can be instantiated as:
 ```ini
-map_data = MapData(width, height, entry, exit, output_file, perfect, seed, bonus, verbose)
+map_data = MapData(width, height, entry, exit, output_file, perfect, seed, bonus)
 ```
 Additional parameters can be added or removed by adjusting the MapData dataclass
 ```ini
@@ -336,7 +347,6 @@ class MapData:
     perfect: bool
     seed: int
     bonus: bool
-	verbose: bool
     NEW_PARAMETER: {data type}
 ```
 
@@ -355,7 +365,7 @@ Since the parent class is an Abstract Base Class (ABC), all inheriting children 
 def gen_map(self) -> list[list[int]]:
 ```
 
-This method will contain the necessary code to generate the populated map, and will vary greatly depending on the map generation algorithm used. It should `return self.map`, to be accessed by the calling function or method
+This method will contain the necessary code to generate the populated map, and will vary greatly depending on the map generation algorithm used. It should `return self.grid`, to be accessed by the calling function or method
 ```ini
 Example from DFS algorithm:
 def gen_map(self) -> list[list[int]]:
@@ -387,7 +397,7 @@ def gen_map(self) -> list[list[int]]:
 
 This grid could then be used with utilities such as ExportMap and MazeSolver, and then rendered to the screen using Renderer
 
-Standalone Package (mazegen)
+### Standalone Package (mazegen)
 
 To satisfy the project's reusability requirements, the core maze generation and solving logic (MapData, MazeGenerator, MazeGeneratorBonus, MazeSolver) is also packaged as a separate, pip-installable module called mazegen. It is fully independent of the MLX rendering code, and is built
 from the mazegen/ directory and pyproject.toml at the root of this repository using python -m build, producing mazegen-1.0.0-py3-none-any.whl and mazegen-1.0.0.tar.gz (also kept at the repo root).
@@ -401,18 +411,18 @@ bashpip install mazegen-1.0.0-py3-none-any.whl
 python
 from mazegen import MapData, MazeGenerator, MazeSolver
 
-# 1. Describe the maze you want
+#### 1. Describe the maze you want
 data = MapData(
     width=20, height=20,
     entry=(0, 0), exit=(19, 19),
-    perfect=True, seed=42,
+    perfect=True, seed=42
 )
 
-# 2. Generate it
+#### 2. Generate it
 generator = MazeGenerator(data)
 grid = generator.gen_map()
 
-# 3. Solve it
+#### 3. Solve it
 solver = MazeSolver(grid, data)
 path_cells, path_directions = solver.generate_final_path()
 
@@ -424,7 +434,7 @@ width / height: grid dimensions in cells. Must be at least 8x6 for the "42" patt
 entry / exit: (row, col) tuples marking the start and end cells, within the grid and not inside the "42" pattern.
 perfect: True for exactly one path between any two cells, False for extra loops/multiple paths.
 seed: any integer - the same seed and parameters always produce the same maze.
-output_file, bonus, verbose: not used by this package; kept for compatibility with the main app's config format and default automatically.
+output_file, bonus: not used by this package; kept for compatibility with the main app's config format and default automatically.
 
 Use MazeGeneratorBonus instead of MazeGenerator for the Sidewinder-style algorithm - it has the same constructor and gen_map() interface.
 

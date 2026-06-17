@@ -10,7 +10,8 @@ VENV_ANCHOR = $(VENV)/.anchor
 .PHONY: install run debug clean lint lint-strict build uninstall
 
 install: $(VENV_ANCHOR)
-	$(VENV_ANCHOR): $(CONFIG_TOML)
+
+$(VENV_ANCHOR): $(CONFIG_TOML)
 	python3 -m venv $(VENV)
 	$(PIP) install --upgrade pip
 	$(PIP) install .[dev]
@@ -18,26 +19,26 @@ install: $(VENV_ANCHOR)
 	$(PIP) install $(MLX_WHL)
 	@touch $(VENV_ANCHOR)
 
-run:
+run: $(VENV_ANCHOR)
 	$(PYTHON) a_maze_ing.py config.txt
 
-debug:
+debug: $(VENV_ANCHOR)
 	$(PYTHON) -m pdb a_maze_ing.py
 
 clean:
 	find . -not -path './$(VENV)/*' -type d \( -name "__pycache__" -o -name "*.egg-info" \
-    -o -name ".mypy_cache" -o -name "build" -o -name "dist" \) -exec rm -rf {} +
+	    -o -name ".mypy_cache" -o -name "build" -o -name "dist" \) -exec rm -rf {} +
 	find . -type f \( -name "*.pyc" -o -name "*.pyo" -o -name "*~" \) -delete
 
-lint:
+lint: $(VENV_ANCHOR)
 	$(VENV_BIN)/flake8 . --exclude=maze_venv/,misc_files/ || true
-	$(PYTHON) -m mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs --exclude 'maze_venv' .
+	$(VENV_BIN)/mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs --exclude 'maze_venv' .
 
-lint-strict:
+lint-strict: $(VENV_ANCHOR)
 	$(VENV_BIN)/flake8 . --exclude=maze_venv/,misc_files/ || true
-	$(PYTHON) -m mypy . --strict --exclude 'maze_venv'
+	$(VENV_BIN)/mypy . --strict --exclude 'maze_venv'
 
-build: install
+build: $(VENV_ANCHOR)
 	$(PYTHON) -m build mazegen
 
 uninstall: clean

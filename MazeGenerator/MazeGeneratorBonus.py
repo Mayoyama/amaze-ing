@@ -18,7 +18,7 @@ class MazeGeneratorBonus(MazeGenBase):
     (where 0 represents a full wall).
     """
 
-    pattern_42 = [
+    _pattern_42 = [
         [0, 6, 10, 12, 0, 0, 0],     # Row 0: █ . . . █ █ █
         [0, 1, 0, 7, 10, 8, 0],      # Row 1: █ . █ . . . █
         [0, 0, 0, 5, 0, 0, 0],       # Row 2: █ █ █ . █ █ █
@@ -28,21 +28,32 @@ class MazeGeneratorBonus(MazeGenBase):
 
     def __init__(self, data: MapData) -> None:
         """Initializes the maze configuration."""
-        super().__init__(data, pattern_42=self.pattern_42)
+        super().__init__(data, pattern_42=self._pattern_42)
         self.fixed_cells: set[tuple[int, int]] = self._embed_42_pattern("full")
         self.full_42_cells = self.fixed_cells
+
+    def _validate_point(self) -> None:
+        """Validates entry/exit against solid-wall cells only, matching
+        DFS behaviour where traversable '42' pattern cells are permitted.
+        """
+        for name, cell in [("ENTRY", self.start_point),
+                           ("EXIT", self.end_point)]:
+            r, c = cell
+            x, y = self._convert_rc_to_xy(r, c)
+            if cell in self.full_42_cells:
+                raise ValueError(f"{name}: ({x}, {y}) collides with "
+                                 "'42' pattern.")
 
     def gen_map(self) -> list[list[int]]:
         """Generates the full maze layout."""
         random.seed(self.seed)
         self.fixed_cells = self._embed_42_pattern("all")
         self._validate_point()
-        
 
         for row in range(self.height):
             for col in range(self.width):
                 if (row, col) in self.fixed_cells:
-                    rnd = self.pattern_42[row][col]
+                    rnd = self._pattern_42[row][col]
                 else:
                     is_last_row = (row == self.height - 1)
                     is_last_col = (col == self.width - 1)
@@ -60,11 +71,12 @@ class MazeGeneratorBonus(MazeGenBase):
                     self.grid[row][col] &= ~rnd
                 self._check_neighbors(row, col)
 
-        if not self.perfect_map:
+        if not self._perfect_map:
             self._non_perfect()
             for row in range(self.height):
                 for col in range(self.width):
                     self._check_neighbors(row, col)
+            self._ensure_alt_path()
 
         self._remove_excessive_rooms()
 

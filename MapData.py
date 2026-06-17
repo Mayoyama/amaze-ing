@@ -13,7 +13,6 @@ class MapData:
     perfect: bool
     seed: int
     bonus: bool
-    verbose: bool
 
 
 def parse_config() -> MapData:
@@ -121,19 +120,7 @@ def parse_config() -> MapData:
                 raise ValueError("Bonus: must be either 'True' or 'False'")
             nbr_line += 1
 
-        elif (line.startswith("VERBOSE=") and nbr_line == 8):
-            if (line[8:].strip() == "True"):
-                verbose = True
-            elif (line[8:].strip() == "False"):
-                verbose = False
-            else:
-                raise ValueError("VERBOSE: must be either 'True' or 'False'")
-            nbr_line += 1
-
-        else:
-            raise ValueError("Invalid, empty, or out-of-order "
-                             "configuration field(s)")
-    if nbr_line != 9:
+    if nbr_line != 8:
         raise ValueError("Invalid, empty, or out-of-order configuration "
                          "field(s)")
 
@@ -142,9 +129,9 @@ def parse_config() -> MapData:
         raise ValueError("Width and height must be positive, "
                          "and greater than 2")
 
-    # Set maximum allowed dimensions to 75
-    if width > 75 or height > 75:
-        raise ValueError("Maximum size of map is 75")
+    # Set maximum allowed dimensions to 100
+    if width > 100 or height > 100:
+        raise ValueError("Maximum size of map is 100")
 
     # Validate that ENTRY is inside map bounds
     if not (0 <= entry[0] < height and 0 <= entry[1] < width):
@@ -159,4 +146,4 @@ def parse_config() -> MapData:
         raise ValueError("EXIT and ENTER should be different points")
 
     return MapData(width, height, entry, exit, output_file,
-                   perfect, seed, bonus, verbose)
+                   perfect, seed, bonus)

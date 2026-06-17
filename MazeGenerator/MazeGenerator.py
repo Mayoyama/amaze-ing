@@ -93,7 +93,7 @@ class MazeGenerator(MazeGenBase):
         if self.height < 3 or self.width < 3:
             return
 
-        if self.perfect_map:
+        if self._perfect_map:
             _verify_42()
         else:
             self._non_perfect()
@@ -101,7 +101,7 @@ class MazeGenerator(MazeGenBase):
             for row in range(self.height):
                 for col in range(self.width):
                     self._check_neighbors(row, col)
-
+            self._ensure_alt_path()
         self._remove_excessive_rooms()
 
     def gen_map(self) -> list[list[int]]:

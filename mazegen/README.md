@@ -21,7 +21,7 @@ from mazegen import MapData, MazeGenerator, MazeSolver
 data = MapData(
     width=20, height=20,
     entry=(0, 0), exit=(19, 19),
-    perfect=True, seed=42,
+    perfect=True, seed=42
 )
 
 # 2. Generate it
@@ -50,7 +50,7 @@ print(path_directions)  # e.g. "EESSWWN..."
   and multiple possible paths.
 - `seed`: any integer. The same seed and parameters always produce the
   same maze.
-- `output_file`, `bonus`, `verbose`: not used by this package - they
+- `output_file`, `bonus`: not used by this package - they
   exist only for compatibility with the main app's config format, and
   have default values so they can be omitted.
 

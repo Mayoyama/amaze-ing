@@ -8,9 +8,8 @@ from MazeGenerator.MazeGeneratorBonus import MazeGeneratorBonus
 from Rendering.MlxRender import Renderer, UI_state
 from Utils.MazeSolver import MazeSolver
 from MapData import parse_config
-from Utils.Utils import export_map, find_alt_paths
+from Utils.Utils import export_map
 import signal
-import sys
 
 
 @dataclass(frozen=True)
@@ -21,6 +20,7 @@ class RenderSettings:
     """
     min_win_width: int = 550
     cell_size: int = 10
+    animation_speed: int = 40
     sprite_path: str = "Rendering/puffy_tiny.png"
 
 
@@ -68,7 +68,7 @@ class App:
         self._init_mlx_window()
         self._init_renderer()
 
-    def _handle_termination(self, signum, frame) -> None:
+    def _handle_termination(self, signum: int, frame: Any) -> None:
         self._mlx.mlx_loop_exit(self._mlx_ptr)
         sig_name = "Ctrl+C" if signum == signal.SIGINT else "Ctrl+Z"
         print(f"\n{sig_name} was detected! Terminating program.")
@@ -175,37 +175,6 @@ class App:
         self._setup_keycode_hooks()
         self._setup_loop_hook()
 
-    def _verify_map(self) -> None:
-        """Analyses the current maze and prints a set number of
-        distinct start-to-exit paths exist (default is 2).
-
-        Callers should only invoke this when map_data.verbose is True —
-        find_alt_paths can take quite a long time to process on a large
-        non-perfect maze, which would otherwise make the maze window
-        appear frozen with no indication in the terminal of why.
-
-        As a further safeguard, the search is still skipped on non-perfect
-        mazes larger than 20x20, printing a message instead.
-        """
-        if (not self._map_data.perfect
-                and (self._map_data.width > 20 or self._map_data.height > 20)):
-            print("Feature unavailable for maps larger than 20x20")
-            return
-
-        count, paths = find_alt_paths(self._grid, self._map_data.entry,
-                                      self._map_data.exit)
-
-        print("Map Analysis".center(30, "="))
-        if count == 0:
-            print("Warning! Path not found!")
-        elif count == 1:
-            print(f"Maze is Perfect! Only one possible path "
-                  f"found:\n{paths[0]}")
-        else:
-            print("Multiple paths found!")
-            for path in paths:
-                print(f"Path found:\n[{path}]")
-
     def _save_map_textfile(self) -> None:
         """Exports the current maze, start/end points, and solution path
         to the configured output file.
@@ -229,8 +198,6 @@ class App:
         self._sprite_pos = self._path_cells[0] if self._path_cells else (0, 0)
         self._ui.show_sprite = False
         self._save_map_textfile()
-        if self._map_data.verbose:
-            self._verify_map()
 
     def _draw_menu(self) -> None:
         """Draws the on-screen control legend below the maze."""
@@ -257,6 +224,7 @@ class App:
         """
         self._renderer.clear_map()
         self._renderer.render_grid(self._path_cells)
+        self._background_snapshot = bytes(self._data)
         if self._ui.show_sprite:
             cast(Any, self._renderer.draw_sprite)(self._sprite_pos)
         self._mlx.mlx_put_image_to_window(
@@ -343,16 +311,30 @@ class App:
             self._animation_tick += 1
 
             # move only every second callback
-            if self._animation_tick % 2 != 0:
+            if self._animation_tick % self._r_config.animation_speed != 0:
                 return
 
             if self._path_cells:
                 if self._sprite_index < len(self._path_cells) - 1:
+                    r, c = self._sprite_pos
                     self._sprite_index += 1
                     self._sprite_pos = self._path_cells[self._sprite_index]
 
-                    self._redraw_map()
+                    sprite_x, sprite_y = self._renderer._cell_to_pixel(r, c)
+                    sprite_x -= self._renderer.SPRITE_OFFSET_X
+                    sprite_y -= self._renderer.SPRITE_OFFSET_Y
 
+                    for y in range(self._sprite_height):
+                        row_start = ((sprite_y + y) * self._size_line) \
+                                      + (sprite_x * 4)
+                        row_end = row_start + self._sprite_width * 4
+                        self._data[row_start:row_end] = \
+                            self._background_snapshot[row_start:row_end]
+
+                    cast(Any, self._renderer.draw_sprite)(self._sprite_pos)
+                    self._mlx.mlx_put_image_to_window(self._mlx_ptr,
+                                                      self._win,
+                                                      self._img, 0, 0)
 
         self._mlx.mlx_loop_hook(self._mlx_ptr, update_img, None)
 
@@ -367,10 +349,9 @@ class App:
                   f"omitted.")
         self._renderer.clear_map()
         self._renderer.render_grid(self._path_cells)
+        self._background_snapshot = bytes(self._data)
 
         self._save_map_textfile()
-        if self._map_data.verbose:
-            self._verify_map()
 
         self._mlx.mlx_put_image_to_window(
             self._mlx_ptr, self._win,
