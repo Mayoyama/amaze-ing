@@ -19,8 +19,9 @@ class RenderSettings:
     dimensions and maze cell size.
     """
     min_win_width: int = 550
-    cell_size: int = 10
-    animation_speed: int = 40
+    cell_size: int = 12
+    animation_speed_L_map: int = 180
+    animation_speed_S_map: int = 480
     sprite_path: str = "Rendering/puffy_tiny.png"
 
 
@@ -310,9 +311,13 @@ class App:
 
             self._animation_tick += 1
 
-            # move only every second callback
-            if self._animation_tick % self._r_config.animation_speed != 0:
-                return
+            # adjust the animation speed of thr sprite based on map size
+            if self._map_data.height * self._map_data.width <= 4000:
+                if self._animation_tick % self._r_config.animation_speed_S_map != 0:
+                    return
+            else:
+                if self._animation_tick % self._r_config.animation_speed_L_map != 0:
+                    return
 
             if self._path_cells:
                 if self._sprite_index < len(self._path_cells) - 1:
