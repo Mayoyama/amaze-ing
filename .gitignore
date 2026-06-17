@@ -5,3 +5,4 @@ __pycache__
 .vs
 maze_venv
 output_maze.txt
+*.egg-info
