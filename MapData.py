@@ -119,6 +119,9 @@ def parse_config() -> MapData:
             else:
                 raise ValueError("Bonus: must be either 'True' or 'False'")
             nbr_line += 1
+        else:
+            raise ValueError("Invalid, empty, or out-of-order configuration "
+                         "field(s)")
 
     if nbr_line != 8:
         raise ValueError("Invalid, empty, or out-of-order configuration "

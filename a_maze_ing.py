@@ -313,10 +313,12 @@ class App:
 
             # adjust the animation speed of thr sprite based on map size
             if self._map_data.height * self._map_data.width <= 4000:
-                if self._animation_tick % self._r_config.animation_speed_S_map != 0:
+                if self._animation_tick % \
+                   self._r_config.animation_speed_S_map != 0:
                     return
             else:
-                if self._animation_tick % self._r_config.animation_speed_L_map != 0:
+                if self._animation_tick % \
+                   self._r_config.animation_speed_L_map != 0:
                     return
 
             if self._path_cells:
